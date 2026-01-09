@@ -1109,7 +1109,7 @@ def get_email_content(message_id: str,current_user: dict = Depends(get_current_u
 def get_todoist(current_user: dict = Depends(get_current_user)):
     try:
         headers = {
-            "Authorization": f"Bearer {os.getenv("TODOIST_TOKEN")}",
+            "Authorization": f"Bearer {os.getenv('TODOIST_TOKEN')}",
             "Content-Type": "application/json"
         }
         response = requests.get("https://api.todoist.com/rest/v2/tasks", headers=headers)
@@ -1135,7 +1135,7 @@ def get_todoist(current_user: dict = Depends(get_current_user)):
 def add_todoist_task(task: TaskItem):
     try:
         headers = {
-            "Authorization": f"Bearer {os.getenv("TODOIST_TOKEN")}",
+            "Authorization": f"Bearer {os.getenv('TODOIST_TOKEN')}",
             "Content-Type": "application/json"
         }
 
@@ -1165,7 +1165,7 @@ def add_todoist_task(task: TaskItem):
 def update_todoist_task(task_id: str, task: TaskItem):
     try:
         headers = {
-            "Authorization": f"Bearer {os.getenv("TODOIST_TOKEN")}",
+            "Authorization": f"Bearer {os.getenv('TODOIST_TOKEN')}",
             "Content-Type": "application/json"
         }
 
@@ -1190,7 +1190,7 @@ def update_todoist_task(task_id: str, task: TaskItem):
 @app.post("/dashboard/todoist/tasks/{task_id}/complete")
 def complete_todoist_task(task_id: str):
     try:
-        headers = {"Authorization": f"Bearer {os.getenv("TODOIST_TOKEN")}"}
+        headers = {"Authorization": f"Bearer {os.getenv('TODOIST_TOKEN')}"}
         response = requests.post(
             f"https://api.todoist.com/rest/v2/tasks/{task_id}/close",
             headers=headers
@@ -1206,7 +1206,7 @@ def complete_todoist_task(task_id: str):
 @app.delete("/dashboard/todoist/tasks/{task_id}")
 def delete_todoist_task(task_id: str):
     try:
-        headers = {"Authorization": f"Bearer {os.getenv("TODOIST_TOKEN")}"}
+        headers = {"Authorization": f"Bearer {os.getenv('TODOIST_TOKEN')}"}
         response = requests.delete(
             f"https://api.todoist.com/rest/v2/tasks/{task_id}",
             headers=headers

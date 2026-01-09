@@ -21,6 +21,7 @@ passlib[bcrypt]>=1.7.4
 # ===============================
 # Google APIs
 # ===============================
+google-generativeai
 google-auth>=2.23.0
 google-auth-oauthlib>=1.1.0
 google-auth-httplib2>=0.2.0
@@ -56,3 +57,5 @@ freezegun>=1.4.0
 factory-boy>=3.3.0
 Faker>=20.0.0
 coverage>=7.3.0
+psutil
+sentry-sdk
