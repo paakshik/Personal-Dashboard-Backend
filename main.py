@@ -43,8 +43,21 @@ COMMANDS_FILE = DATA_DIR / "commands.json"
 CHAT_HISTORY_FILE = DATA_DIR / "chat-data.json"
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 security = HTTPBearer()
-
+from google_auth_oauthlib.flow import Flow
 # Helper functions for JSON file operations
+def get_google_flow():
+    return Flow.from_client_config(
+        {
+            "web": {
+                "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+                "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [os.getenv("GOOGLE_REDIRECT_URI")],
+            }
+        },
+        scopes=SCOPES,  # ✅ USE THE FULL SCOPES LIST
+    )
 def write_json_file(file_path, data):
     """Write data to JSON file with error handling"""
     try:
@@ -407,6 +420,7 @@ class ChatRequest(BaseModel):
     message: str
     attachment_id: Optional[str] = None
     history: Optional[List[Dict[str, str]]] = []
+
 # --- VALIDATION FUNCTIONS --- (ADD THIS SECTION HERE)
 def validate_command_name(name: str) -> bool:
     """Validate command name"""
@@ -510,6 +524,7 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 # --- GEMINI FILE UPLOAD ENDPOINT ---
 @app.post("/dashboard/gemini/upload")
 def upload_to_gemini(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
@@ -543,15 +558,21 @@ def upload_to_gemini(file: UploadFile = File(...), current_user: dict = Depends(
 @app.get("/auth/google/login")
 def login_google():
     try:
-        flow = InstalledAppFlow.from_client_secrets_file(
-            os.getenv("CREDENTIALS_FILE"),
-            scopes=SCOPES,
-            redirect_uri=os.getenv("BACKEND_REDIRECT_URI")
+        flow = get_google_flow()
+
+        # ✅ redirect_uri must be set on the Flow object
+        flow.redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+
+        # ✅ DO NOT overwrite `flow`
+        auth_url, state = flow.authorization_url(
+            access_type="offline",
+            include_granted_scopes="true",
+            prompt="consent"
         )
-        auth_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
-        return {"url": auth_url}
+
+        return {"auth_url": auth_url}
+
     except Exception as e:
-        print(f"Error generating login URL: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.websocket("/ws/ai/stream")
@@ -706,10 +727,7 @@ User Context:
                 response = model.generate_content(
                     message_parts,
                     stream=True,
-                    generation_config={
-                        "temperature": 0.7,
-                        "max_output_tokens": 2048,
-                    },
+                    generation_config={"temperature": 0.7, "max_output_tokens": 2048, },
                 )
 
                 full_response = ""
@@ -752,18 +770,18 @@ User Context:
 
 @app.get("/auth/google/callback")
 def callback_google(request: Request):
-
     code = request.query_params.get("code")
     if not code:
         raise HTTPException(status_code=400, detail="Missing authorization code")
 
     try:
-        flow = InstalledAppFlow.from_client_secrets_file(
-            os.getenv("CREDENTIALS_FILE"),
-            scopes=SCOPES,
-            redirect_uri=os.getenv("BACKEND_REDIRECT_URI")
-        )
-        flow.fetch_token(code=code)
+        flow = get_google_flow()
+        flow.redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+
+        # FIX: Disable strict scope validation before fetching token
+        flow.oauth2session._client.allowed_scope_change = True
+
+        flow.fetch_token(authorization_response=str(request.url))
         creds = flow.credentials
 
         service = build("oauth2", "v2", credentials=creds)
@@ -813,7 +831,7 @@ def callback_google(request: Request):
             "token_uri": creds.token_uri,
             "client_id": creds.client_id,
             "client_secret": creds.client_secret,
-            "scopes": creds.scopes
+            "scopes": creds.scopes  # This stores the ACTUAL scopes Google granted
         }
         write_json_file(TOKENS_FILE, all_tokens)
 
@@ -823,7 +841,8 @@ def callback_google(request: Request):
                 "sub": user_id,
                 "email": email,
                 "exp": datetime.utcnow()
-                + timedelta(minutes=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
+                       + timedelta(
+                    minutes=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
             },
             SECRET_KEY,
             algorithm=os.getenv("ALGORITHM")
@@ -838,6 +857,8 @@ def callback_google(request: Request):
 
     except Exception as e:
         print(f"❌ Callback Error: {e}")
+        import traceback
+        traceback.print_exc()  # Add this for more detailed error info
         return JSONResponse(
             status_code=500,
             content={"detail": f"Authentication failed: {str(e)}"}
