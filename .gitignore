@@ -1,0 +1,19 @@
+# Credentials
+.env
+
+# Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+venv
+env/
+
+
+# Data Files (Crucial for your main.py setup)
+# We ignore these because Render will use its own Persistent Disk
+users.json
+tokens.json
+projects.json
+commands.json
+chat-data.json
+credentials.json
