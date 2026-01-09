@@ -1,0 +1,47 @@
+[
+  {
+    "id": "1",
+    "name": "E-Commerce Platform",
+    "description": "Full-stack e-commerce solution with React and Node.js",
+    "progress": 75,
+    "status": "in-progress",
+    "technologies": [
+      "React",
+      "Node.js",
+      "MongoDB",
+      "Stripe"
+    ],
+    "category": "web",
+    "priority": "high",
+    "lastUpdated": "2024-01-15",
+    "links": {
+      "github": "https://github.com/user/ecommerce",
+      "database": "https://mongodb.com/dashboard",
+      "live": "https://ecommerce-demo.com",
+      "api": "https://api.ecommerce.com/docs"
+    },
+    "created_at": "2024-01-15T10:00:00",
+    "updated_at": "2024-01-15T10:00:00"
+  },
+  {
+    "id": "2",
+    "name": "Portfolio Website",
+    "description": "Personal portfolio with project showcase",
+    "progress": 100,
+    "status": "completed",
+    "technologies": [
+      "React",
+      "Tailwind CSS",
+      "Framer Motion"
+    ],
+    "category": "web",
+    "priority": "medium",
+    "lastUpdated": "2024-01-10",
+    "links": {
+      "github": "https://github.com/user/portfolio",
+      "live": "https://portfolio-demo.com"
+    },
+    "created_at": "2024-01-10T09:30:00",
+    "updated_at": "2024-01-10T09:30:00"
+  }
+]

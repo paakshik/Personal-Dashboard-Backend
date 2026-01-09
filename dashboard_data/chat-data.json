@@ -1,0 +1,122 @@
+[
+  {
+    "id": "49f5b90a-3f66-45d5-ad99-6a189a55f510",
+    "role": "user",
+    "text": "open commands ",
+    "timestamp": "2025-12-18T11:52:36.530945"
+  },
+  {
+    "id": "928af0e2-c4fa-4ad6-84d1-f7d65b472eff",
+    "role": "model",
+    "text": "<<NAVIGATE:commands>>",
+    "timestamp": "2025-12-18T11:52:36.531562"
+  },
+  {
+    "id": "0dd23dd6-94c2-48f7-8941-fa807adbbaca",
+    "role": "user",
+    "text": "tell me about the  unread emails  today ",
+    "timestamp": "2025-12-18T11:53:01.148707"
+  },
+  {
+    "id": "f3dad6c1-8082-4acc-9dae-c44add5417a8",
+    "role": "model",
+    "text": "I don't have information on whether emails are read or unread, but here are your recent emails. The Todoist email is explicitly for today, December 18, 2025:\n\n*   **\"Paakshik\u2019s task(s) for Dec 18 2025 \u2192 2 overdue - Todoist <no-reply@todoist.com>\"** - This email indicates you have 2 overdue tasks for today.\n*   \"PYTHON-9 - Traceback (most recent call last): - Sentry <noreply@md.getsentry.com>\"\n*   \"Your free Render database expires soon: Space Explorer - Render <no-reply@render.com>\"\n*   \"Launching Your First App? We Can Help - Heroku <no-reply@heroku.com>\"\n*   \"Exclusive gift for Wispr Flow users - Wispr Flow <hello@mail.wispr.ai>\"",
+    "timestamp": "2025-12-18T11:53:01.149541"
+  },
+  {
+    "id": "50e6bfb7-61d8-47ab-8ce1-722a3f808b2d",
+    "role": "user",
+    "text": "Hey, what is your name? ",
+    "timestamp": "2025-12-18T11:56:58.312191"
+  },
+  {
+    "id": "efae81fe-58f3-43f1-8a3c-8784c61e7d23",
+    "role": "model",
+    "text": "I am the Nexus Dashboard AI.",
+    "timestamp": "2025-12-18T11:56:58.313088"
+  },
+  {
+    "id": "968fdf35-715e-4136-bbc1-632756f41ee0",
+    "role": "user",
+    "text": "how much  history  you can record ",
+    "timestamp": "2025-12-20T01:07:15.931323"
+  },
+  {
+    "id": "ea36dc54-bc93-478d-b0a8-baeaed022c04",
+    "role": "model",
+    "text": "As an AI, I don't \"record\" history in the way a human does with memory or a database stores persistent records of all past interactions. My \"history\" is limited to the current conversation turn and the context provided to me (like your calendar events, tasks, and recent emails).\n\nEach time you interact with me, I receive the current prompt and the specific context data that the system provides. I don't retain information from previous sessions unless it's explicitly passed along as part of the current context.\n\nSo, in short, I can only remember what's given to me in the current interaction.",
+    "timestamp": "2025-12-20T01:07:15.932228"
+  },
+  {
+    "id": "533a1d5f-938a-4e64-98bf-030faa863f2e",
+    "role": "user",
+    "text": "read the givendocument [Attached File]",
+    "timestamp": "2025-12-20T01:08:08.544396"
+  },
+  {
+    "id": "04fb83a3-6378-40ed-9386-5dbb15f4632a",
+    "role": "model",
+    "text": "The document appears to be a list of names, each associated with a code (e.g., \"25EC10091\") and in some cases, an abbreviation like \"NSS\" or \"NCC\".\n\nHere's a summary of the content:\n\nThe document lists entries with the following format: `[CODE] [NAME] [OPTIONAL ABBREVIATION]`\n\n**Examples from the list:**\n*   25EC10091 NAVANEETHA KRISHNAN S\n*   25EC10103 Om Sai Agrawal NSS\n*   25EC10122 ESLAVATH NARENDER NCC\n*   25EC10134 Paakshik Badjatya NSS\n*   25EC10147 Midasala Bhargav NCC\n\nThe list contains 73 entries in total, starting from 25EC10091 (NAVANEETHA KRISHNAN S) and ending with 25EC10163 (Lokesh Kumar). Many entries have no abbreviation, while others have either \"NSS\" or \"NCC\" next to the name.",
+    "timestamp": "2025-12-20T01:08:08.545222"
+  },
+  {
+    "id": "1cf4a873-cc08-4dc4-ac18-451a4e450219",
+    "role": "user",
+    "text": "take me to commands ",
+    "timestamp": "2025-12-25T12:29:00.914929"
+  },
+  {
+    "id": "6731215e-1e24-4320-bb9b-bd46f6fdb0d0",
+    "role": "model",
+    "text": "<<NAVIGATE:commands>>",
+    "timestamp": "2025-12-25T12:29:00.918914"
+  },
+  {
+    "id": "c99d0491-8e6d-46d7-9360-bb8ac14a480a",
+    "role": "user",
+    "text": "summarise the file [Attached File]",
+    "timestamp": "2025-12-25T12:30:30.557195"
+  },
+  {
+    "id": "e1ccbabf-1209-48f9-8f68-b8862ae01613",
+    "role": "model",
+    "text": "The attached file is **Form-6: Application Form for New Voters** from the **Election Commission of India**.\n\nIt is used by individuals to apply for inclusion in the electoral roll. The form requires applicants to provide:\n*   **Personal Details:** Full name (in official language and English), gender, date of birth, and details of a relative (father, mother, husband, etc.).\n*   **Contact Information:** Mobile number and email ID.\n*   **Identification:** Aadhaar number (if available).\n*   **Address:** Full present ordinary residence address.\n*   **Supporting Documents:** Self-attested copies for proof of age (e.g., birth certificate, Aadhaar, PAN, passport, academic certificates) and proof of residence (e.g., utility bills, Aadhaar, passport, land records, rent/sale deed).\n*   **Optional Information:** Category of disability (if any) and details of a family member already on the electoral roll.\n*   **Declaration:** A statement by the applicant confirming citizenship, residency, and understanding of the legal implications of providing false information.\n\nThe form also includes instructions for persons with disabilities and an acknowledgment section to be filled upon submission.",
+    "timestamp": "2025-12-25T12:30:30.560743"
+  },
+  {
+    "id": "ee6d048b-9454-4f9c-adb7-5decbb9334c8",
+    "role": "user",
+    "text": "get me  all the unread emails today ",
+    "timestamp": "2025-12-25T12:30:51.797049"
+  },
+  {
+    "id": "4666e8e8-310e-4ffa-bf2a-5f169c2978a9",
+    "role": "model",
+    "text": "I cannot differentiate between read and unread emails from the current data. The provided email list only shows recent emails without their read status.",
+    "timestamp": "2025-12-25T12:30:51.802192"
+  },
+  {
+    "id": "557985a8-7bcc-48c9-9f64-99edfddab526",
+    "role": "user",
+    "text": "ok do that' ",
+    "timestamp": "2025-12-25T12:31:06.032940"
+  },
+  {
+    "id": "6e93efe1-7881-42ad-b65f-b544c68aa5ac",
+    "role": "model",
+    "text": "I'm not sure what you mean by \"do that\". Could you please tell me what you would like me to do? For example, are you trying to navigate to a specific view, or perform an action related to your calendar, tasks, or emails?",
+    "timestamp": "2025-12-25T12:31:06.425208"
+  },
+  {
+    "id": "89f00d96-a6b1-432a-97fb-4e98cd6b3463",
+    "role": "user",
+    "text": "get me all the tasks ",
+    "timestamp": "2025-12-25T12:31:28.760093"
+  },
+  {
+    "id": "2f233a79-7075-474b-b1de-377d647470ef",
+    "role": "model",
+    "text": "Here are all your tasks:\n* Upload certificate on linkedin\n* Make more changes to linkedin profile\n* git/github course complete\n* complete strikers dsa sheet\n* solve leet code problems\n* learn basic mathematics needed for ML\n* machine learning Andrew NG course\n* mathlabs course\n* Mongo db coyrse\n* sql course",
+    "timestamp": "2025-12-25T12:31:28.765925"
+  }
+]
