@@ -201,6 +201,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 SCOPES = [
     'https://www.googleapis.com/auth/calendar',
     'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/gmail.readonly',  # ← Add this
     'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -768,6 +769,7 @@ User Context:
         except Exception:
             pass
 
+
 @app.get("/auth/google/callback")
 def callback_google(request: Request):
     code = request.query_params.get("code")
@@ -778,8 +780,19 @@ def callback_google(request: Request):
         flow = get_google_flow()
         flow.redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
 
-        # FIX: Disable strict scope validation before fetching token
-        flow.oauth2session._client.allowed_scope_change = True
+        # FIX: Monkey-patch the client to allow scope changes
+        import oauthlib.oauth2
+
+        # Create a custom client class that allows scope changes
+        class ScopeTolerantClient(oauthlib.oauth2.WebApplicationClient):
+            def __init__(self, client_id, **kwargs):
+                super().__init__(client_id, **kwargs)
+                self.allowed_scope_change = True
+
+        # Replace the client with our tolerant version
+        flow.oauth2session._client = ScopeTolerantClient(
+            client_id=os.getenv("GOOGLE_CLIENT_ID")
+        )
 
         flow.fetch_token(authorization_response=str(request.url))
         creds = flow.credentials
@@ -831,7 +844,7 @@ def callback_google(request: Request):
             "token_uri": creds.token_uri,
             "client_id": creds.client_id,
             "client_secret": creds.client_secret,
-            "scopes": creds.scopes  # This stores the ACTUAL scopes Google granted
+            "scopes": creds.scopes
         }
         write_json_file(TOKENS_FILE, all_tokens)
 
@@ -858,11 +871,12 @@ def callback_google(request: Request):
     except Exception as e:
         print(f"❌ Callback Error: {e}")
         import traceback
-        traceback.print_exc()  # Add this for more detailed error info
+        traceback.print_exc()
         return JSONResponse(
             status_code=500,
             content={"detail": f"Authentication failed: {str(e)}"}
         )
+
 
 @app.get("/auth/verify")
 def verify_token_endpoint(current_user: dict = Depends(get_current_user)):
