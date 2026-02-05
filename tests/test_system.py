@@ -1,6 +1,5 @@
-import pytest
 from unittest.mock import patch, Mock
-import psutil
+
 
 def test_system_vitals_unauthorized(client):
     """Test system vitals without auth"""
@@ -59,7 +58,7 @@ def test_websocket_status(authenticated_client):
 
 def test_collect_system_vitals_data():
     """Test the system vitals data collection function"""
-    from main import collect_system_vitals_data
+    from app.main import collect_system_vitals_data
     
     with patch('main.psutil.cpu_percent') as mock_cpu, \
          patch('main.psutil.virtual_memory') as mock_mem, \

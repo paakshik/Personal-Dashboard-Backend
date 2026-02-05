@@ -1,0 +1,566 @@
+23:07:16 - Personal Dashboard - INFO - Logging system initialized from config
+23:07:17 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:08:48 - Personal Dashboard - INFO - Logging system initialized from config
+23:08:48 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:09:07 - Personal Dashboard - INFO - Logging system initialized from config
+23:09:07 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:09:59 - Personal Dashboard - INFO - Logging system initialized from config
+23:09:59 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:10:04 - Personal Dashboard - INFO - Logging system initialized from config
+23:10:04 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:11:24 - Personal Dashboard - INFO - Logging system initialized from config
+23:11:25 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:11:29 - Personal Dashboard - INFO - Logging system initialized from config
+23:11:29 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:11:42 - Personal Dashboard - INFO - Logging system initialized from config
+23:11:42 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:12:52 - Personal Dashboard - INFO - Logging system initialized from config
+23:12:53 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:13:35 - Personal Dashboard - INFO - Logging system initialized from config
+23:13:36 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:14:06 - Personal Dashboard - INFO - Logging system initialized from config
+23:14:06 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:14:21 - Personal Dashboard - INFO - Logging system initialized from config
+23:14:22 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:14:22 - Personal Dashboard - INFO - ======================================================================
+23:14:22 - Personal Dashboard - INFO - ======================================================================
+23:14:37 - Personal Dashboard - INFO - Logging system initialized from config
+23:14:38 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:14:45 - Personal Dashboard - INFO - Logging system initialized from config
+23:14:45 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:14:46 - Personal Dashboard - INFO - ======================================================================
+23:14:46 - Personal Dashboard - INFO - ======================================================================
+23:16:44 - Personal Dashboard - INFO - Logging system initialized from config
+23:16:44 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:16:45 - Personal Dashboard - INFO - ======================================================================
+23:16:45 - Personal Dashboard - INFO - ======================================================================
+23:16:48 - Personal Dashboard - INFO - Logging system initialized from config
+23:16:48 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:16:49 - Personal Dashboard - INFO - ======================================================================
+23:16:49 - Personal Dashboard - INFO - ======================================================================
+23:16:59 - Personal Dashboard - INFO - Logging system initialized from config
+23:17:00 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:17:00 - Personal Dashboard - INFO - ======================================================================
+23:17:00 - Personal Dashboard - INFO - ======================================================================
+23:17:34 - Personal Dashboard - INFO - Logging system initialized from config
+23:17:34 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:17:34 - Personal Dashboard - INFO - ======================================================================
+23:17:34 - Personal Dashboard - INFO - ======================================================================
+23:17:42 - Personal Dashboard - INFO - Logging system initialized from config
+23:17:43 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:17:43 - Personal Dashboard - INFO - ======================================================================
+23:17:43 - Personal Dashboard - INFO - ======================================================================
+23:18:17 - Personal Dashboard - INFO - Logging system initialized from config
+23:18:18 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:18:18 - Personal Dashboard - INFO - ======================================================================
+23:18:18 - Personal Dashboard - INFO - ======================================================================
+23:20:44 - Personal Dashboard - INFO - Logging system initialized from config
+23:20:44 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:20:45 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:20:45 - Personal Dashboard - INFO - ✅ Data files and sample data initialized successfully
+23:20:45 - Personal Dashboard - INFO - ✅ Registered: Authentication Routes
+23:20:45 - Personal Dashboard - INFO - ✅ Registered: Google Service Routes
+23:20:45 - Personal Dashboard - INFO - ✅ Registered: Project & Command Routes
+23:20:45 - Personal Dashboard - INFO - ✅ Registered: Gemini AI Routes
+23:20:45 - Personal Dashboard - INFO - ✅ Registered: Todoist Routes
+23:20:45 - Personal Dashboard - INFO - ✅ Registered: System Monitoring Routes
+23:20:45 - Personal Dashboard - INFO - ✅ Registered: WebSocket Handlers
+23:20:45 - Personal Dashboard - INFO - ======================================================================
+23:20:45 - Personal Dashboard - INFO - 🚀 Nexus Dashboard API v2.0 initialized successfully!
+23:20:45 - Personal Dashboard - INFO - ======================================================================
+23:21:50 - Personal Dashboard - INFO - Logging system initialized from config
+23:21:51 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:21:51 - Personal Dashboard - INFO - ======================================================================
+23:21:51 - Personal Dashboard - INFO - ======================================================================
+23:21:54 - Personal Dashboard - INFO - Logging system initialized from config
+23:21:55 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:21:55 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:21:55 - Personal Dashboard - INFO - ✅ Data files and sample data initialized successfully
+23:21:55 - Personal Dashboard - INFO - ✅ Registered: Authentication Routes
+23:21:55 - Personal Dashboard - INFO - ✅ Registered: Google Service Routes
+23:21:55 - Personal Dashboard - INFO - ✅ Registered: Project & Command Routes
+23:21:55 - Personal Dashboard - INFO - ✅ Registered: Gemini AI Routes
+23:21:55 - Personal Dashboard - INFO - ✅ Registered: Todoist Routes
+23:21:55 - Personal Dashboard - INFO - ✅ Registered: System Monitoring Routes
+23:21:55 - Personal Dashboard - INFO - ✅ Registered: WebSocket Handlers
+23:21:55 - Personal Dashboard - INFO - ======================================================================
+23:21:55 - Personal Dashboard - INFO - 🚀 Nexus Dashboard API v2.0 initialized successfully!
+23:21:55 - Personal Dashboard - INFO - ======================================================================
+23:22:14 - Personal Dashboard - INFO - Logging system initialized from config
+23:22:14 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:22:15 - Personal Dashboard - INFO - ======================================================================
+23:22:15 - Personal Dashboard - INFO - ======================================================================
+23:22:16 - Personal Dashboard - INFO - Logging system initialized from config
+23:22:16 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:22:17 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:22:17 - Personal Dashboard - INFO - ✅ Data files and sample data initialized successfully
+23:22:17 - Personal Dashboard - INFO - ✅ Registered: Authentication Routes
+23:22:17 - Personal Dashboard - INFO - ✅ Registered: Google Service Routes
+23:22:17 - Personal Dashboard - INFO - ✅ Registered: Project & Command Routes
+23:22:17 - Personal Dashboard - INFO - ✅ Registered: Gemini AI Routes
+23:22:17 - Personal Dashboard - INFO - ✅ Registered: Todoist Routes
+23:22:17 - Personal Dashboard - INFO - ✅ Registered: System Monitoring Routes
+23:22:17 - Personal Dashboard - INFO - ✅ Registered: WebSocket Handlers
+23:22:17 - Personal Dashboard - INFO - ======================================================================
+23:22:17 - Personal Dashboard - INFO - 🚀 Nexus Dashboard API v2.0 initialized successfully!
+23:22:17 - Personal Dashboard - INFO - ======================================================================
+23:24:41 - Personal Dashboard - INFO - Logging system initialized from config
+23:24:41 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:24:41 - Personal Dashboard - INFO - ======================================================================
+23:24:41 - Personal Dashboard - INFO - ======================================================================
+23:24:59 - Personal Dashboard - INFO - Logging system initialized from config
+23:24:59 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:25:00 - Personal Dashboard - INFO - ======================================================================
+23:25:00 - Personal Dashboard - INFO - ======================================================================
+23:25:28 - Personal Dashboard - INFO - Logging system initialized from config
+23:25:28 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:25:28 - Personal Dashboard - INFO - ======================================================================
+23:25:28 - Personal Dashboard - INFO - ======================================================================
+23:25:42 - Personal Dashboard - INFO - Logging system initialized from config
+23:25:42 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:25:42 - Personal Dashboard - INFO - ======================================================================
+23:25:42 - Personal Dashboard - INFO - ======================================================================
+23:25:52 - Personal Dashboard - INFO - Logging system initialized from config
+23:25:52 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - Personal Dashboard - INFO - ✅ Data files and sample data initialized successfully
+23:25:53 - Personal Dashboard - INFO - ✅ Registered: Authentication Routes
+23:25:53 - Personal Dashboard - INFO - ✅ Registered: Google Service Routes
+23:25:53 - Personal Dashboard - INFO - ✅ Registered: Project & Command Routes
+23:25:53 - Personal Dashboard - INFO - ✅ Registered: Gemini AI Routes
+23:25:53 - Personal Dashboard - INFO - ✅ Registered: Todoist Routes
+23:25:53 - Personal Dashboard - INFO - ✅ Registered: System Monitoring Routes
+23:25:53 - Personal Dashboard - INFO - ✅ Registered: WebSocket Handlers
+23:25:53 - Personal Dashboard - INFO - ======================================================================
+23:25:53 - Personal Dashboard - INFO - 🚀 Nexus Dashboard API v2.0 initialized successfully!
+23:25:53 - Personal Dashboard - INFO - ======================================================================
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/docs "HTTP/1.1 200 OK"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/redoc "HTTP/1.1 200 OK"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/auth/google/login "HTTP/1.1 200 OK"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - Personal Dashboard - ERROR - Flow error
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/auth/google/login "HTTP/1.1 500 Internal Server Error"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/auth/google/verify "HTTP/1.1 401 Unauthorized"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/auth/google/verify "HTTP/1.1 200 OK"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/auth/google/logout "HTTP/1.1 401 Unauthorized"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/auth/google/logout "HTTP/1.1 200 OK"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:25:53 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:53 - Personal Dashboard - INFO - Successfully fetched 0 projects for user test-user-123
+23:25:53 - Personal Dashboard - ERROR - Unhandled exception: 6 validation errors:
+  {'type': 'missing', 'loc': ('response', 'name'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'user_id'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'description'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'id'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'created_at'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'updated_at'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\fastapi.py", line 14, in get_dashboard_projects
+    GET /dashboard/projects/projects
+Traceback (most recent call last):
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\starlette.py", line 164, in _create_span_call
+    return await old_call(app, scope, receive, send, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\starlette.py", line 303, in _sentry_exceptionmiddleware_call
+    await old_call(self, scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\starlette.py", line 164, in _create_span_call
+    return await old_call(app, scope, receive, send, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\starlette.py", line 164, in _create_span_call
+    return await old_call(app, scope, receive, send, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\fastapi.py", line 132, in _sentry_app
+    return await old_app(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\routing.py", line 377, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<10 lines>...
+    )
+    ^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\routing.py", line 215, in serialize_response
+    raise ResponseValidationError(
+    ...<3 lines>...
+    )
+fastapi.exceptions.ResponseValidationError: 6 validation errors:
+  {'type': 'missing', 'loc': ('response', 'name'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'user_id'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'description'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'id'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'created_at'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'updated_at'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\fastapi.py", line 14, in get_dashboard_projects
+    GET /dashboard/projects/projects
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/projects/projects "HTTP/1.1 422 Unprocessable Entity"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/test-project-123 "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: PUT http://testserver/dashboard/projects/test-project-123 "HTTP/1.1 422 Unprocessable Entity"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: DELETE http://testserver/dashboard/projects/test-project-123 "HTTP/1.1 405 Method Not Allowed"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/search?q=Python "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/commands/commands "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/commands/commands "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/commands/commands "HTTP/1.1 422 Unprocessable Entity"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/commands/test-command-123 "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: PUT http://testserver/dashboard/commands/test-command-123 "HTTP/1.1 422 Unprocessable Entity"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - INFO - User test-user-123 requested deletion of command: test-command-123
+23:25:54 - Personal Dashboard - INFO - Successfully deleted command test-command-123 for User test-user-123.
+23:25:54 - httpx - INFO - HTTP Request: DELETE http://testserver/dashboard/commands/test-command-123 "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/calender/events "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - ERROR - No Google credentials for user test-user-123
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/calender/events "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - ERROR - No Google credentials for user test-user-123
+23:25:54 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/calender/calendar/events "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/gmail "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - ERROR - No Google credentials for user test-user-123
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/gmail "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/todoist/tasks "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - INFO - Fetched 0 tasks for None
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/todoist/tasks "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - INFO - Task created via Todoist API by None: task-123
+23:25:54 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/todoist/tasks "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - ERROR - File I/O error writing to backend\dashboard_data\system_metrics.json: [Errno 2] No such file or directory: 'backend\\dashboard_data\\system_metrics.json'
+Traceback (most recent call last):
+  File "D:\Important Projects\Personal Dashboard\backend\app\utils\file_ops.py", line 150, in write_json_file
+    with open(file_path, 'w', encoding='utf-8') as f:
+         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'backend\\dashboard_data\\system_metrics.json'
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/current "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/info "HTTP/1.1 404 Not Found"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/ports "HTTP/1.1 404 Not Found"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/hardware "HTTP/1.1 404 Not Found"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/network "HTTP/1.1 404 Not Found"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/processes "HTTP/1.1 404 Not Found"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - INFO - Successfully retrieved 1 raw records.
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/history "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - INFO - Successfully retrieved 0 raw records.
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/history "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - WARNING - Analysis skipped: No data found for the last 24 hours
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/data-insights "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/gemini/upload "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/gemini/history "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - ERROR - Chat history corrupted - not a list
+23:25:54 - Personal Dashboard - ERROR - Failed to get history: 500: Chat history corrupted - not a list
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/gemini/history "HTTP/1.1 500 Internal Server Error"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - WARNING - Chat history file is not a list
+23:25:54 - httpx - INFO - HTTP Request: DELETE http://testserver/dashboard/gemini/history "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/upload "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - INFO - 📥 API: Received upload request from user test-user-123 for file: test.txt
+23:25:54 - Personal Dashboard - INFO - ✅ API: Upload success for test.txt
+23:25:54 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/upload "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - WARNING - Auth failed: Malformed or invalid token - Invalid header string: 'utf-8' codec can't decode byte 0x8a in position 0: invalid start byte
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - Personal Dashboard - WARNING - Unauthorized or non-existent access attempt: User test-user-123 -> Project nonexistent-id
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/nonexistent-id "HTTP/1.1 404 Not Found"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:54 - httpx - INFO - HTTP Request: GET http://testserver/docs "HTTP/1.1 200 OK"
+23:25:54 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:25:55 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:47 - Personal Dashboard - INFO - Logging system initialized from config
+23:28:47 - Personal Dashboard - INFO - Sentry monitoring initialized
+23:28:47 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:47 - Personal Dashboard - INFO - ✅ Data files and sample data initialized successfully
+23:28:47 - Personal Dashboard - INFO - ✅ Registered: Authentication Routes
+23:28:47 - Personal Dashboard - INFO - ✅ Registered: Google Service Routes
+23:28:47 - Personal Dashboard - INFO - ✅ Registered: Project & Command Routes
+23:28:48 - Personal Dashboard - INFO - ✅ Registered: Gemini AI Routes
+23:28:48 - Personal Dashboard - INFO - ✅ Registered: Todoist Routes
+23:28:48 - Personal Dashboard - INFO - ✅ Registered: System Monitoring Routes
+23:28:48 - Personal Dashboard - INFO - ✅ Registered: WebSocket Handlers
+23:28:48 - Personal Dashboard - INFO - ======================================================================
+23:28:48 - Personal Dashboard - INFO - 🚀 Nexus Dashboard API v2.0 initialized successfully!
+23:28:48 - Personal Dashboard - INFO - ======================================================================
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/docs "HTTP/1.1 200 OK"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/redoc "HTTP/1.1 200 OK"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/auth/google/login "HTTP/1.1 200 OK"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - Personal Dashboard - ERROR - Flow error
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/auth/google/login "HTTP/1.1 500 Internal Server Error"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/auth/google/verify "HTTP/1.1 401 Unauthorized"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/auth/google/verify "HTTP/1.1 200 OK"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/auth/google/logout "HTTP/1.1 401 Unauthorized"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/auth/google/logout "HTTP/1.1 200 OK"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:28:48 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:48 - Personal Dashboard - INFO - Successfully fetched 0 projects for user test-user-123
+23:28:48 - Personal Dashboard - ERROR - Unhandled exception: 6 validation errors:
+  {'type': 'missing', 'loc': ('response', 'name'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'user_id'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'description'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'id'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'created_at'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'updated_at'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\fastapi.py", line 14, in get_dashboard_projects
+    GET /dashboard/projects/projects
+Traceback (most recent call last):
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\starlette.py", line 164, in _create_span_call
+    return await old_call(app, scope, receive, send, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\starlette.py", line 303, in _sentry_exceptionmiddleware_call
+    await old_call(self, scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\starlette.py", line 164, in _create_span_call
+    return await old_call(app, scope, receive, send, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\starlette.py", line 164, in _create_span_call
+    return await old_call(app, scope, receive, send, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\fastapi.py", line 132, in _sentry_app
+    return await old_app(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\routing.py", line 377, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<10 lines>...
+    )
+    ^
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\fastapi\routing.py", line 215, in serialize_response
+    raise ResponseValidationError(
+    ...<3 lines>...
+    )
+fastapi.exceptions.ResponseValidationError: 6 validation errors:
+  {'type': 'missing', 'loc': ('response', 'name'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'user_id'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'description'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'id'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'created_at'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+  {'type': 'missing', 'loc': ('response', 'updated_at'), 'msg': 'Field required', 'input': {'projects': [], 'stats': {'total': 0, 'inProgress': 0, 'completed': 0, 'planning': 0, 'avgProgress': 0}}}
+
+  File "D:\Important Projects\Personal Dashboard\backend\venv\Lib\site-packages\sentry_sdk\integrations\fastapi.py", line 14, in get_dashboard_projects
+    GET /dashboard/projects/projects
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/projects/projects "HTTP/1.1 422 Unprocessable Entity"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/test-project-123 "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: PUT http://testserver/dashboard/projects/test-project-123 "HTTP/1.1 422 Unprocessable Entity"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: DELETE http://testserver/dashboard/projects/test-project-123 "HTTP/1.1 405 Method Not Allowed"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/search?q=Python "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/commands/commands "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/commands/commands "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/commands/commands "HTTP/1.1 422 Unprocessable Entity"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/commands/test-command-123 "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: PUT http://testserver/dashboard/commands/test-command-123 "HTTP/1.1 422 Unprocessable Entity"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - INFO - User test-user-123 requested deletion of command: test-command-123
+23:28:49 - Personal Dashboard - INFO - Successfully deleted command test-command-123 for User test-user-123.
+23:28:49 - httpx - INFO - HTTP Request: DELETE http://testserver/dashboard/commands/test-command-123 "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/calender/events "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - ERROR - No Google credentials for user test-user-123
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/calender/events "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - ERROR - No Google credentials for user test-user-123
+23:28:49 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/calender/calendar/events "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/gmail "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - ERROR - No Google credentials for user test-user-123
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/gmail "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/todoist/tasks "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - INFO - Fetched 0 tasks for None
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/todoist/tasks "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - INFO - Task created via Todoist API by None: task-123
+23:28:49 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/todoist/tasks "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - ERROR - File I/O error writing to backend\dashboard_data\system_metrics.json: [Errno 2] No such file or directory: 'backend\\dashboard_data\\system_metrics.json'
+Traceback (most recent call last):
+  File "D:\Important Projects\Personal Dashboard\backend\app\utils\file_ops.py", line 150, in write_json_file
+    with open(file_path, 'w', encoding='utf-8') as f:
+         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'backend\\dashboard_data\\system_metrics.json'
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/current "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/info "HTTP/1.1 404 Not Found"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/ports "HTTP/1.1 404 Not Found"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/hardware "HTTP/1.1 404 Not Found"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/network "HTTP/1.1 404 Not Found"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/processes "HTTP/1.1 404 Not Found"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - INFO - Successfully retrieved 1 raw records.
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/history "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - INFO - Successfully retrieved 0 raw records.
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/history "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - WARNING - Analysis skipped: No data found for the last 24 hours
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/system/data-insights "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/gemini/upload "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/gemini/history "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - ERROR - Chat history corrupted - not a list
+23:28:49 - Personal Dashboard - ERROR - Failed to get history: 500: Chat history corrupted - not a list
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/gemini/history "HTTP/1.1 500 Internal Server Error"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - WARNING - Chat history file is not a list
+23:28:49 - httpx - INFO - HTTP Request: DELETE http://testserver/dashboard/gemini/history "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/upload "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - INFO - 📥 API: Received upload request from user test-user-123 for file: test.txt
+23:28:49 - Personal Dashboard - INFO - ✅ API: Upload success for test.txt
+23:28:49 - httpx - INFO - HTTP Request: POST http://testserver/dashboard/upload "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - WARNING - Auth failed: Malformed or invalid token - Invalid header string: 'utf-8' codec can't decode byte 0x8a in position 0: invalid start byte
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/projects "HTTP/1.1 401 Unauthorized"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - WARNING - Unauthorized or non-existent access attempt: User test-user-123 -> Project nonexistent-id
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/dashboard/projects/nonexistent-id "HTTP/1.1 404 Not Found"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/health "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - httpx - INFO - HTTP Request: GET http://testserver/docs "HTTP/1.1 200 OK"
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully
+23:28:49 - Personal Dashboard - INFO - ✅ All data files initialized successfully

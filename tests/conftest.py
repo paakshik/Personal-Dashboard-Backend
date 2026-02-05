@@ -2,7 +2,7 @@
 import pytest
 import asyncio
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 import os
 import sys
 import json
@@ -14,8 +14,8 @@ from jose import jwt
 # Add the parent directory to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from main import app, init_data_files, get_current_user
-from main import USERS_FILE, TOKENS_FILE, PROJECTS_FILE, COMMANDS_FILE
+from app.main import app, init_data_files
+from app.dependencies import get_current_user
 
 # Test configuration
 os.environ["SECRET_KEY"] = "test-secret-key-for-tests-only"
@@ -60,17 +60,17 @@ def event_loop():
 def setup_test_data():
     """Setup and teardown test data"""
     # Backup original paths
-    from main import DATA_DIR
+    from app.config import DATA_DIR
     original_data_dir = DATA_DIR
     
     # Override with test directory
-    import main
-    main.DATA_DIR = TEST_DATA_DIR
-    main.USERS_FILE = TEST_DATA_DIR / "users.json"
-    main.TOKENS_FILE = TEST_DATA_DIR / "tokens.json"
-    main.PROJECTS_FILE = TEST_DATA_DIR / "projects.json"
-    main.COMMANDS_FILE = TEST_DATA_DIR / "commands.json"
-    main.CHAT_HISTORY_FILE = TEST_DATA_DIR / "chat-data.json"
+    from app import config
+    config.DATA_DIR = TEST_DATA_DIR
+    config.USERS_FILE = TEST_DATA_DIR / "users.json"
+    config.TOKENS_FILE = TEST_DATA_DIR / "tokens.json"
+    config.PROJECTS_FILE = TEST_DATA_DIR / "projects.json"
+    config.COMMANDS_FILE = TEST_DATA_DIR / "commands.json"
+    config.CHAT_HISTORY_FILE = TEST_DATA_DIR / "chat-data.json"
     
     # Create test directory
     TEST_DATA_DIR.mkdir(exist_ok=True)
@@ -79,7 +79,7 @@ def setup_test_data():
     init_data_files()
     
     # Write test user to users file
-    with open(main.USERS_FILE, 'w') as f:
+    with open(config.USERS_FILE, 'w') as f:
         json.dump([TEST_USER], f)
     
     # Write test token
@@ -91,13 +91,13 @@ def setup_test_data():
             "expires_at": (datetime.utcnow() + timedelta(minutes=30)).isoformat()
         }
     }
-    with open(main.TOKENS_FILE, 'w') as f:
+    with open(config.TOKENS_FILE, 'w') as f:
         json.dump(tokens_data, f)
     
     yield
     
     # Restore original
-    main.DATA_DIR = original_data_dir
+    config.DATA_DIR = original_data_dir
 
 @pytest.fixture
 def client():

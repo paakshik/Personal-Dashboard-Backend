@@ -1,13 +1,10 @@
 import pytest
 from fastapi import HTTPException
 from unittest.mock import patch, Mock
-import json
-from jose import jwt
-from datetime import datetime, timedelta
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from main import app
+from app.main import app
 
 def test_root_endpoint(client):
     """Test root endpoint"""
@@ -48,7 +45,7 @@ def test_logout_endpoint_without_auth(client):
 def test_invalid_token_verification(client):
     """Test token verification with invalid token"""
     # Mock the get_current_user dependency to simulate invalid token
-    from main import get_current_user
+    from app.main import get_current_user
     
     def mock_invalid_user():
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -69,7 +66,7 @@ def test_callback_without_code(client):
 
 def test_get_current_user_invalid_token():
     """Test get_current_user with invalid token"""
-    from main import get_current_user
+    from app.main import get_current_user
     from fastapi.security import HTTPAuthorizationCredentials
     
     invalid_credentials = HTTPAuthorizationCredentials(
@@ -95,7 +92,7 @@ def test_token_expiry():
         algorithm="HS256"
     )
     
-    from main import get_current_user
+    from app.main import get_current_user
     from fastapi.security import HTTPAuthorizationCredentials
     
     credentials = HTTPAuthorizationCredentials(
