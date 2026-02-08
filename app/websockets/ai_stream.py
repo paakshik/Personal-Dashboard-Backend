@@ -9,6 +9,7 @@ from app.utils.gemini_helper import (should_enable_search,save_chat_message,
 
 router = APIRouter(prefix="/dashboard/gemini", tags=["Gemini AI"])
 
+@router.websocket("/stream")
 async def websocket_ai_stream(
     websocket: WebSocket,
     current_user: Dict[str, Any] = Depends(get_current_user_ws)
@@ -59,7 +60,7 @@ async def websocket_ai_stream(
             if tools: await websocket.send_text("[🔍 Searching...]")
 
             # 4. STREAM & PERSIST
-            model = genai.GenerativeModel("gemini-1.5-pro", system_instruction=system_instruction)
+            model = genai.GenerativeModel("gemini-2.5-flash-lite", system_instruction=system_instruction)
             full_ai_text = await stream_gemini_response(websocket, model, message_parts, tools)
 
             save_chat_message("user", user_prompt, user_id, attachment_id)

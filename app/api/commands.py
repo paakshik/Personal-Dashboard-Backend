@@ -14,7 +14,7 @@ router = APIRouter(prefix="/dashboard/commands", tags=["Commands"])
 
 DANGEROUS_CHARS_PATTERN = re.compile(r'[;&|`$]')
 
-@router.get("/commands", response_model=List[CommandInDB])
+@router.get("", response_model=List[CommandInDB])
 def get_all_commands(current_user: Dict[str, Any] = Depends(get_current_user)) -> List[
     CommandInDB]:
     """
@@ -46,7 +46,6 @@ def get_all_commands(current_user: Dict[str, Any] = Depends(get_current_user)) -
         logger.debug(
             f"Successfully loaded {len(user_commands)} commands for User {user_id}.")
         return user_commands
-
     except FileNotFoundError:
         error_msg = f"Commands file not found at: {COMMANDS_FILE}"
         logger.error(error_msg)
@@ -61,11 +60,11 @@ def get_all_commands(current_user: Dict[str, Any] = Depends(get_current_user)) -
             detail="System was unable to load command configuration."
         )
 
-@router.post("/commands", response_model=Dict[str, Any], status_code=201)
+@router.post("", response_model=CommandInDB, status_code=201)
 def create_command(
         cmd: CommandItem,
         current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> CommandInDB:
     """
     Creates a new  command configuration for the authenticated user.
 
@@ -82,25 +81,43 @@ def create_command(
     Raises:
         HTTPException (500): If the file write operation fails.
     """
-    user_id = current_user.get("id", "unknown")
-    logger.info(f"User {user_id} is attempting to add command: '{cmd.title}'")
-
     try:
-        commands = read_json_file(COMMANDS_FILE)
-        new_cmd = cmd.model_dump()
-        new_cmd_id = str(uuid.uuid4())
-        timestamp = datetime.now().isoformat()
-        new_cmd.update({
-            "id": new_cmd_id,
-            "user_id": user_id,
-            "created_at": timestamp,
-            "updated_at": timestamp
-        })
-        commands.append(new_cmd)
+        user_id = current_user.get("id", "unknown")
+
+        # Load existing commands
+        try:
+            commands = read_json_file(COMMANDS_FILE)
+            if not isinstance(commands, list):
+                commands = []
+        except FileNotFoundError:
+            commands = []
+
+        cmd_id = str(uuid.uuid4())
+        now_iso = datetime.now().isoformat()
+
+        # 1. Create the Object (for the Response)
+        new_cmd = CommandInDB(
+            user_id=user_id,
+            id=cmd_id,
+            created_at=now_iso,
+            updated_at=now_iso,
+            **cmd.model_dump()
+        )
+
+        # 2. Convert to Dictionary (CRITICAL)
+        new_cmd_dict = new_cmd.model_dump()
+
+        # 3. Save to File
+        commands.append(new_cmd_dict)
+        # ❌ DELETED: commands.append(new_cmd)  <-- This was causing the crash!
+
         write_json_file(COMMANDS_FILE, commands)
+
+        logger.info(f"✅ Command created: {cmd.name} (ID: {cmd_id})")
         return new_cmd
+
     except Exception as e:
-        logger.error(f"Failed to save command '{cmd.title}' for user {user_id}: {e}")
+        logger.error(f"Failed to save command '{cmd.name}': {e}")
         sentry_sdk.capture_exception(e)
         raise HTTPException(
             status_code=500,
@@ -130,11 +147,9 @@ def delete_command(
         HTTPException (500): If the file write operation fails.
     """
     user_id = current_user.get("id")
-    logger.info(f"User {user_id} requested deletion of command: {command_id}")
 
     try:
         commands = read_json_file(COMMANDS_FILE)
-
 
         command_to_delete = next(
             (c for c in commands if
@@ -260,13 +275,13 @@ def update_command(
     user_id = current_user.get("id")
     logger.info(f"User {user_id} attempting to update command {command_id}")
 
-    if not command_data.title or len(command_data.title) > 100:
+    if not command_data.name or len(command_data.name) > 100:
         raise HTTPException(
             status_code=400,
-            detail="Title must be between 1 and 100 characters."
+            detail="Name must be between 1 and 100 characters."
         )
 
-    if DANGEROUS_CHARS_PATTERN.search(command_data.action):
+    if DANGEROUS_CHARS_PATTERN.search(command_data.command):
         logger.warning(f"Security Alert: User {user_id} used illegal chars.")
         raise HTTPException(
             status_code=400,
@@ -324,71 +339,70 @@ def update_command(
         )
 
 
-@router.post("/execute", response_model=Dict[str, Any])
+@router.post("/{command_id}/execute", response_model=Dict[str, Any])
 def execute_command(
-    request: Dict[str, str],
-    current_user: Dict[str, Any] = Depends(get_current_user)
+        command_id: str,
+        current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
-    Executes a system shell command with strict prefix limitations.
+    Executes a saved system command by its ID.
 
-    WARNING: usage of 'shell=True' implies significant security risks.
-    Ensure 'allowed_prefixes' is maintained strictly.
-
-    Args:
-        request (Dict[str, str]): JSON body containing the "command" string.
-        current_user (Dict[str, Any]): The authenticated user context.
-
-    Returns:
-        Dict[str, Any]: The stdout, stderr, and return code of the command.
-
-    Raises:
-        HTTPException (400): If no command is provided.
-        HTTPException (403): If the command is not in the allowed allowlist.
-        HTTPException (408): If the command takes longer than 10 seconds.
-        HTTPException (500): If an unexpected system error occurs.
+    1. Looks up the command in the JSON file using command_id.
+    2. Verifies it belongs to the current user.
+    3. Checks against the security allowlist.
+    4. Executes it.
     """
-    user_id = current_user.get("id", "unknown")
-    command = request.get("command")
-
-    # 1. Input Validation
-    if not command:
-        logger.warning(f"User {user_id} tried to execute an empty command.")
-        raise HTTPException(
-            status_code=400,
-            detail="No command provided"
-        )
-
-    # 2. Security Check (Allowlist)
-    allowed_prefixes = [
-        "ls", "pwd", "whoami", "date", "echo", "ps", "df", "uptime",
-        "uname", "free", "top", "htop", "netstat", "ifconfig", "ip",
-        "systemctl", "service", "docker", "git", "npm",
-        "python", "node", "curl", "wget", "grep", "find", "cat", "head",
-        "tail", "wc", "du", "who", "last", "ping", "traceroute"
-    ]
-
-
-    if not any(command.startswith(prefix) for prefix in allowed_prefixes):
-        logger.warning(f"Security Alert: User {user_id} attempted unauthorized command: '{command}'")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Command not allowed. Allowed prefixes: {', '.join(allowed_prefixes[:5])}..."
-        )
-
-    logger.info(f"User {user_id} executing system command: '{command}'")
+    user_id = current_user.get("id")
 
     try:
+        # 1. LOAD command from file (Secure Source)
+        commands = read_json_file(COMMANDS_FILE)
+
+        saved_command = next(
+            (c for c in commands if
+             c.get("id") == command_id and c.get("user_id") == user_id),
+            None
+        )
+
+        if not saved_command:
+            logger.warning(
+                f"Execute failed: Command {command_id} not found for User {user_id}")
+            raise HTTPException(status_code=404, detail="Command not found.")
+
+        # Extract the actual command string from the saved record
+        command_str = saved_command.get("command")
+        if not command_str:
+            raise HTTPException(status_code=400, detail="Saved command is empty.")
+
+        # 2. Security Check (Allowlist)
+        allowed_prefixes = [
+            "ls", "pwd", "whoami", "date", "echo", "ps", "df", "uptime",
+            "uname", "free", "top", "htop", "netstat", "ifconfig", "ip",
+            "systemctl", "service", "docker", "git", "npm",
+            "python", "node", "curl", "wget", "grep", "find", "cat", "head",
+            "tail", "wc", "du", "who", "last", "ping", "traceroute"
+        ]
+
+        # Check if the command starts with any allowed prefix
+        if not any(
+                command_str.strip().startswith(prefix) for prefix in allowed_prefixes):
+            logger.warning(
+                f"Security Alert: User {user_id} tried running unauthorized: '{command_str}'")
+            raise HTTPException(
+                status_code=403,  # 403 Forbidden is better than 500 here
+                detail=f"Command '{command_str.split()[0]}' is not allowed for security reasons."
+            )
+
+        logger.info(f"User {user_id} executing: '{command_str}'")
+
+        # 3. Execute
         result = subprocess.run(
-            command,
+            command_str,
             shell=True,
             capture_output=True,
             text=True,
             timeout=10
         )
-
-        if result.returncode != 0:
-            logger.info(f"Command '{command}' failed with code {result.returncode}")
 
         return {
             "status": "success" if result.returncode == 0 else "error",
@@ -397,17 +411,13 @@ def execute_command(
             "stderr": result.stderr.strip() if result.stderr else ""
         }
 
+    except HTTPException:
+        raise
     except subprocess.TimeoutExpired:
-        logger.error(f"Command timed out for User {user_id}: '{command}'")
-        raise HTTPException(
-            status_code=500,
-            detail="Command execution timed out (limit: 10s)"
-        )
-
+        logger.error(f"Command timed out: {command_id}")
+        raise HTTPException(status_code=504, detail="Command timed out (limit: 10s)")
     except Exception as e:
-        logger.critical(f"Critical execution error for User {user_id}: {e}")
+        logger.error(f"Execution error for {command_id}: {e}")
         sentry_sdk.capture_exception(e)
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error during command execution."
-        )
+        raise HTTPException(status_code=500,
+                            detail="Internal server error during execution.")

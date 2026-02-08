@@ -13,7 +13,6 @@ from app.config import (
 from app.utils.file_ops import read_json_file, write_json_file
 from app.services.google_auth import get_google_flow
 from app.dependencies import get_current_user
-
 # Router for all authentication endpoints
 router = APIRouter(prefix="/dashboard/auth/google", tags=["Authentication"])
 

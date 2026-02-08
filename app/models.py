@@ -33,14 +33,12 @@ class ProjectLink(BaseModel):
 class ProjectItem(BaseModel):
     """Project data for creation/update."""
     name: str  # Project name
-    user_id: str  # User identifier for project
     description: str  # Detailed project description
     progress: int = 0  # 0-100 completion percentage
     status: str = "planning"  # planning/in_progress/completed/on_hold
     technologies: List[str] = []  # Used technologies/languages
     category: str = "web"  # web/mobile/data/devops/other
     priority: str = "medium"  # low/medium/high/critical
-    lastUpdated: str = ""  # ISO timestamp of last update
     links: ProjectLink = ProjectLink()  # Related URLs
 
 class ProjectInDB(ProjectItem):
@@ -50,11 +48,23 @@ class ProjectInDB(ProjectItem):
     created_at: str  # ISO timestamp of creation
     updated_at: str  # ISO timestamp of last update
 
+class ProjectsDashboardResponse(BaseModel):
+    """Response format for the projects dashboard endpoint."""
+    projects: List[ProjectInDB]
+    stats: ProjectStats
+
+class ProjectStats(BaseModel):
+    """Statistics aggregated from user's projects."""
+    total: int
+    inProgress: int
+    completed: int
+    planning: int
+    avgProgress: float
+
 # --- Commands ---
 class CommandItem(BaseModel):
     """System/terminal command with metadata."""
     name: str  # Display name
-    user_id: str  # User identifier for project
     command: str  # Actual command to execute
     description: Optional[str] = ""  # What the command does
     category: Optional[str] = "general"  # general/docker/git/database/etc.

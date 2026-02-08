@@ -150,3 +150,26 @@ def classify_events_by_date(raw_events: List[Dict[str, Any]]) -> List[Dict[str, 
             sentry_sdk.capture_exception(e)
             continue
     return [classified_events[k] for k in sorted(classified_events.keys())]
+
+
+def format_datetime(datetime_str: str) -> str:
+    """
+    Formats the datetime string to ISO format for Google Calendar.
+
+    Args:
+        datetime_str (str): The datetime string to format (e.g., "2024-01-01T12:00:00Z").
+
+    Returns:
+        str: The formatted datetime string in ISO format (e.g., "2024-01-01T12:00:00").
+    """
+    # Handle "Z" and make sure the "T" separator is present
+    if datetime_str.endswith("Z"):
+        datetime_str = datetime_str[:-1]  # Remove "Z"
+    if "T" not in datetime_str:
+        datetime_str = datetime_str.replace(" ", "T")  # Replace space with "T"
+    try:
+        # Parse the datetime string and format it to remove the timezone info
+        return datetime.fromisoformat(datetime_str).isoformat()
+    except ValueError:
+        # Handle potential parsing errors
+        raise ValueError(f"Invalid datetime format: {datetime_str}")

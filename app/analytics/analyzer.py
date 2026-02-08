@@ -84,11 +84,20 @@ class SystemAnalyzer:
         with sentry_sdk.start_span(op="data_processing",
                                    description="generate_summary_stats"):
             try:
-                logger.debug(f"Generating summary for {len(data)} data points.")
+                valid_data = []
+                for d in data:
+                    try:
+                        # Test if critical fields exist and are valid
+                        if "timestamp" in d and "cpu" in d:
+                            datetime.fromisoformat(d["timestamp"])  # Test parsing
+                            valid_data.append(d)
+                    except (ValueError, TypeError):
+                        continue  # Skip bad rows
 
-                # EXTRACT: Pulling raw lists for Vectorized operations
-                # Note: We assume the data structure is validated before reaching here,
-                # but a KeyError here would be caught by the block below.
+                if not valid_data:
+                    return {}
+
+
                 timestamps = [datetime.fromisoformat(d["timestamp"]) for d in data]
                 cpu_values = [d["cpu"]["percent"] for d in data]
                 memory_values = [d["memory"]["percent"] for d in data]
