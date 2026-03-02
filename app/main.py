@@ -19,10 +19,6 @@ from datetime import datetime, timezone
 # Import configuration
 from app.config import logger
 
-# ============================================================================
-# IMPORT ALL ROUTERS (API Endpoints)
-# ============================================================================
-
 # Authentication & User Management
 from app.api.auth import router as auth_router
 

@@ -76,7 +76,7 @@ def get_gmail_inbox(
         return []
 
 
-@router.get("/email/{message_id}")
+@router.get("/gmail/{message_id}")
 def get_email_content(
         message_id: str,
         service: Any = Depends(get_gmail_service),
@@ -140,7 +140,7 @@ def get_email_content(
         )
 
 
-@router.post("/email/{message_id}/read")
+@router.post("/gmail/{message_id}/read")
 def mark_email_as_read(
         message_id: str,
         service: Any = Depends(get_gmail_service),

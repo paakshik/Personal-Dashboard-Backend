@@ -48,10 +48,10 @@ def read_json_file(file_path: Union[str, Path]) -> Union[
                 path_obj.parent.mkdir(parents=True, exist_ok=True)
 
                 # Create the actual file with empty JSON
-                with open(path_obj, 'w') as f:
+                with open(path_obj, 'w',encoding='utf-8') as f:
                     json.dump(default_data, f)
 
-                logger.info(f"📁 Lazy Initialized new data file: {path_obj}")
+                logger.info(f"Lazy Initialized new data file: {path_obj}")
                 return default_data
             except OSError as e:
                 logger.error(f"Failed to lazy create {path_obj}: {e}")
@@ -61,7 +61,7 @@ def read_json_file(file_path: Union[str, Path]) -> Union[
 
     # 2. Normal Read
     try:
-        with open(path_obj, 'r') as f:
+        with open(path_obj, 'r', encoding='utf-8') as f:
             return json.load(f)
     except (json.JSONDecodeError, IOError) as e:
         logger.error(f"Error reading {path_obj}: {e}")
@@ -134,7 +134,7 @@ def upload_bytes_to_drive(
                    (Note: Permission errors are logged but do NOT raise an exception).
     """
     try:
-        logger.info(f"📂 Starting Drive upload for user {user_id}: '{filename}'")
+        logger.info(f"Starting Drive upload for user {user_id}: '{filename}'")
 
         # 1. Validation Logic
         all_tokens = read_json_file(TOKENS_FILE)
@@ -162,7 +162,7 @@ def upload_bytes_to_drive(
         ).execute()
 
         file_id = uploaded_file.get('id')
-        logger.info(f"✅ File uploaded successfully. ID: {file_id}")
+        logger.info(f"File uploaded successfully. ID: {file_id}")
 
         # 5. Set Permissions (Public Read)
         try:
@@ -172,7 +172,7 @@ def upload_bytes_to_drive(
             ).execute()
         except Exception as perm_error:
             # We log this but do NOT raise it, because the file IS uploaded.
-            logger.error(f"⚠️ Permissions error for {file_id}: {perm_error}")
+            logger.error(f"Permissions error for {file_id}: {perm_error}")
             sentry_sdk.capture_exception(perm_error)
 
         return uploaded_file
@@ -180,5 +180,5 @@ def upload_bytes_to_drive(
     except Exception as e:
         # Capture critical failures that stop the upload
         sentry_sdk.capture_exception(e)
-        logger.error(f"❌ Upload Failure for '{filename}': {str(e)}")
+        logger.error(f"Upload Failure for '{filename}': {str(e)}")
         raise e

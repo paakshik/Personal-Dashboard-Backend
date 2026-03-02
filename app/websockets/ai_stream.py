@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from fastapi import  WebSocket, WebSocketDisconnect,Depends,APIRouter
 from app.config import (logger,sentry_sdk)
 from app.dependencies import get_current_user_ws
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/dashboard/gemini", tags=["Gemini AI"])
 async def websocket_ai_stream(
     websocket: WebSocket,
     current_user: Dict[str, Any] = Depends(get_current_user_ws)
-) -> None:
+) -> Any:
     """
     Maintains a persistent bidirectional AI chat session via WebSockets.
 
@@ -55,13 +56,18 @@ async def websocket_ai_stream(
             if attachment_id:
                 file = await process_ai_attachment(attachment_id, websocket)
                 if file: message_parts.append(file)
+            tools = [types.Tool(google_search=types.GoogleSearch())]\
+                if should_enable_search(user_prompt) else []
+            if tools:
+                await websocket.send_text("[🔍 Searching...]")
 
-            tools = [{'google_search_retrieval': {}}] if should_enable_search(user_prompt) else []
-            if tools: await websocket.send_text("[🔍 Searching...]")
-
-            # 4. STREAM & PERSIST
-            model = genai.GenerativeModel("gemini-2.5-flash-lite", system_instruction=system_instruction)
-            full_ai_text = await stream_gemini_response(websocket, model, message_parts, tools)
+            config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                tools=tools
+            )
+            full_ai_text = await stream_gemini_response(websocket,
+                                                        "gemini-2.5-flash",
+                                                        message_parts,config)
 
             save_chat_message("user", user_prompt, user_id, attachment_id)
             save_chat_message("assistant", full_ai_text, user_id)

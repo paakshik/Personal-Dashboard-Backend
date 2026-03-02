@@ -1,19 +1,19 @@
 import os
 import shutil
 import uuid
-import google.generativeai as genai
+import google.genai as genai
 from fastapi import APIRouter, UploadFile, File, \
     Depends, HTTPException
 from app.config import (DATA_DIR,
                         CHAT_HISTORY_FILE,logger,sentry_sdk)
 from app.dependencies import get_current_user
 from app.utils.file_ops import read_json_file , write_json_file
-from typing import Dict, List, Any
+from typing import Dict, Any,   List
 from app.utils.gemini_helper import save_chat_message
 
 
 router = APIRouter(prefix="/dashboard/gemini", tags=["Gemini AI"])
-get_chat_history_data = read_json_file(CHAT_HISTORY_FILE)
+
 
 # api endpoint for uploading the file on gemini also the jwt is verified.
 @router.post("/upload")
@@ -92,7 +92,6 @@ def upload_to_gemini(
                 sentry_sdk.capture_message(f"Failed to cleanup temp file {temp_path}: {cleanup_error}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/history")
 def get_user_history(
         current_user: dict = Depends(get_current_user)
@@ -110,18 +109,11 @@ def get_user_history(
         user_id = current_user["id"]
         all_history = read_json_file(CHAT_HISTORY_FILE)
 
-        if not isinstance(all_history, list):
-            logger.error("Chat history corrupted - not a list")
-            sentry_sdk.capture_message("Chat history corrupted - not a list.",
-                                       level="error")
-            raise HTTPException(status_code=500, detail="Chat history corrupted - not a list")
+        # Handle the new dictionary format: {user_id: [messages]}
+        if isinstance(all_history, dict):
+            return all_history.get(user_id, [])
 
-        user_history = [
-            msg for msg in all_history
-            if msg.get("user_id") == user_id
-        ]
-
-        return user_history
+        return []
 
     except Exception as e:
         logger.error(f"Failed to get history: {e}")
@@ -146,39 +138,60 @@ def clear_user_history(
         Dictionary with status and confirmation message
 
     Raises:
-        HTTPException: 401 - If user is not authenticated (handled by get_current_user dependency
+        HTTPException: 500 - If an error occurs during processing
     """
-    user_id = current_user["id"]
+    try:
+        user_id = current_user["id"]
+        all_history = read_json_file(CHAT_HISTORY_FILE)
 
-    # Read all history
-    all_history = read_json_file(CHAT_HISTORY_FILE)
+        # 1. Handle the new dictionary format: {user_id: [messages]}
+        if isinstance(all_history, dict):
+            if user_id in all_history:
+                messages_removed = len(all_history[user_id])
 
-    logger.debug(
-        f"Total messages before clearing: {len(all_history) if isinstance(all_history, list) else 'invalid format'}")
+                # Clear the user's specific history array
+                all_history[user_id] = []
+                write_json_file(CHAT_HISTORY_FILE, all_history)
 
-    if not isinstance(all_history, list):
-        logger.warning("Chat history file is not a list")
-        sentry_sdk.capture_message("Chat history file is not a list",
+                logger.debug(
+                    f"Cleared {messages_removed} messages for user {current_user['email']}")
+                return {
+                    "status": "cleared",
+                    "message": f"Cleared {messages_removed} messages for user {current_user['email']}"
+                }
+
+            return {
+                "status": "cleared",
+                "message": f"No history found for user {current_user['email']}"
+            }
+
+        # 2. Fallback logic for legacy list format (just in case)
+        if isinstance(all_history, list):
+            other_users_history = [
+                msg for msg in all_history
+                if msg.get("user_id") != user_id
+            ]
+            messages_removed = len(all_history) - len(other_users_history)
+
+            write_json_file(CHAT_HISTORY_FILE, other_users_history)
+            logger.debug(
+                f"Updated chat history file, remaining messages: {len(other_users_history)}")
+
+            return {
+                "status": "cleared",
+                "message": f"Cleared {messages_removed} messages for user {current_user['email']}"
+            }
+
+        # 3. Handle corrupted/unknown format
+        logger.warning("Chat history file is neither a dict nor a list")
+        sentry_sdk.capture_message("Chat history file is an invalid format",
                                    level="warning")
         return {
-            "status": "cleared",
-            "message": f"No history found for user {current_user['email']}"
+            "status": "error",
+            "message": "Invalid chat history format"
         }
 
-    other_users_history = [
-        msg for msg in all_history
-        if msg.get("user_id") != user_id
-    ]
-
-    messages_removed = len(all_history) - len(other_users_history)
-
-    # Write back (without current user's messages)
-    write_json_file(CHAT_HISTORY_FILE, other_users_history)
-    logger.debug(
-        f"Updated chat history file, remaining messages: {len(other_users_history)}")
-
-    return {
-        "status": "cleared",
-        "message": f"Cleared {messages_removed} messages for user {current_user['email']}"
-    }
-
+    except Exception as e:
+        logger.error(f"Failed to clear history: {e}")
+        sentry_sdk.capture_exception(e)
+        raise HTTPException(status_code=500, detail="Failed to clear chat history")

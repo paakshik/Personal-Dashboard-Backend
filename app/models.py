@@ -19,7 +19,7 @@ class TaskItem(BaseModel):
     """Task to create in Todoist."""
     content: str  # Main task text
     description: Optional[str] = ""  # Additional notes
-    project_id: Optional[int] = None  # Todoist project ID
+    project_id: Optional[str] = None  # Todoist project ID
     labels: Optional[List[str]] = []  # Tags for categorization
 
 # --- Projects ---

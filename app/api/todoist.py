@@ -7,7 +7,7 @@ from typing import Dict,Any,List
 from app.models import TodoistTaskResponse
 
 router = APIRouter(prefix="/dashboard/todoist", tags=["Todoist"])
-API_URL = "https://api.todoist.com/rest/v2/tasks/"
+API_URL = "https://api.todoist.com/api/v1/tasks"
 
 
 @router.get("/tasks", response_model=List[TodoistTaskResponse])
@@ -32,7 +32,7 @@ def get_todoist_tasks(
         resp = requests.get(API_URL, headers=headers)
         resp.raise_for_status()
 
-        tasks = resp.json()
+        tasks = resp.json().get("results", [])
         logger.info(f"Fetched {len(tasks)} tasks for {current_user.get('email')}")
         return tasks
     except requests.exceptions.RequestException as e:
@@ -68,7 +68,7 @@ def add_todoist_task(
     """
     try:
         headers = get_todoist_headers(json_content=True)
-        payload = task.model_dump(exclude_none=True)
+        payload = task.model_dump(exclude_unset=True)
 
         resp = requests.post(API_URL, headers=headers, json=payload)
         resp.raise_for_status()
@@ -114,7 +114,7 @@ def update_todoist_task(
     """
     try:
         headers = get_todoist_headers(json_content=True)
-        payload = task.model_dump(exclude_none=True)
+        payload = task.model_dump(exclude_unset=True)
         update_url = f"{API_URL}/{task_id}"
         resp = requests.post(update_url, headers=headers, json=payload)
         resp.raise_for_status()

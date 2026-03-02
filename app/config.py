@@ -12,7 +12,7 @@ import os,sys
 from pathlib import Path
 from dotenv import load_dotenv
 import sentry_sdk
-import google.generativeai as genai
+import google.genai as genai
 import logging
 
 # Load environment variables
@@ -59,7 +59,6 @@ def setup_logging(log_dir_name: str = "logs") -> logging.Logger:
         datefmt='%H:%M:%S',
         handlers=[
             logging.StreamHandler(sys.stdout),  # Print to terminal
-            # ✅ FIXED: Now uses dynamic log directory
             logging.FileHandler(log_dir / "app.log")  # Save to file
         ]
     )
@@ -155,7 +154,7 @@ SCOPES = [
 
 # --- Gemini Configuration ---
 GEMINI_API_KEY = optional_env("GEMINI_API_KEY")
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key='GEMINI_API_KEY')
 
 # --- Data Storage ---
 APP_DIR = Path(__file__).parent.resolve()
