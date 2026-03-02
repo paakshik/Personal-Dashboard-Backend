@@ -6,6 +6,11 @@ from app.config import sentry_sdk,logger
 
 router = APIRouter(prefix="/dashboard", tags=["Google Services"])
 
+constants = {
+    'constant1':'(No Subject)',
+    'constant2': 'Unknown Sender'
+}
+
 @router.get("/gmail")
 def get_gmail_inbox(
     service: Any = Depends(get_gmail_service),
@@ -46,8 +51,10 @@ def get_gmail_inbox(
 
                 headers = email_meta.get('payload', {}).get('headers', [])
 
-                subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '(No Subject)')
-                sender_raw = next((h['value'] for h in headers if h['name'] == 'From'), 'Unknown Sender')
+                subject = next((h['value'] for h in headers if h['name'] ==
+                                'Subject'), constants['constant1'])
+                sender_raw = next((h['value'] for h in headers if h['name'] ==
+                                   'From'), constants['constant2'])
                 date_str = next((h['value'] for h in headers if h['name'] == 'Date'), '')
                 sender_clean = sender_raw.split('<')[0].strip().replace('"', '') if '<' in sender_raw else sender_raw
 
@@ -75,6 +82,91 @@ def get_gmail_inbox(
         logger.error(f"❌ Critical Gmail Error for user {user_id}: {str(e)}", exc_info=True)
         return []
 
+@router.get("/gmail/search")
+def search_gmail(
+    q: str,
+    max_results: int,
+    service: Any = Depends(get_gmail_service),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> List[Dict[str, Any]]:
+    """
+    Search Gmail messages using Gmail's native search syntax.
+
+    This endpoint leverages the Gmail API's `q` parameter, which supports the same
+    operators as the Gmail web interface:
+    - `from:someone@example.com`
+    - `subject:"project update"`
+    - `has:attachment`
+    - `is:unread`
+    - `after:2023/01/01`
+    - `before:2024/01/01`
+
+    Args:
+        q (str): The search query.
+        max_results (int): Maximum number of messages to return (1-100).
+        service (Any): Authenticated Gmail service (injected).
+        current_user (Dict[str, Any]): Authenticated user (injected).
+
+    Returns:
+        List[Dict[str, Any]]: A list of email objects with metadata (id, subject, sender, date, snippet, labels).
+
+    Raises:
+        HTTPException: 500 if the Gmail API call fails.
+    """
+    user_id = current_user.get("id")
+    clean_emails: List[Dict[str, Any]] = []
+
+    try:
+        params:Dict[str, Any]= {
+            'userId': 'me',
+            'q': q,
+            'maxResults': max_results
+        }
+
+
+        results = service.users().messages().list(**params).execute()
+        messages = results.get('messages', [])
+
+        if not messages:
+            logger.info(f"No messages found for query '{q}' for user {user_id}")
+            return []
+
+        for msg in messages:
+            try:
+                email_meta = service.users().messages().get(
+                    userId='me',
+                    id=msg['id'],
+                    format='metadata'
+                ).execute()
+
+                headers = email_meta.get('payload', {}).get('headers', [])
+                subject = next((h['value'] for h in headers if h['name'] ==
+                                'Subject'), constants['constant1'])
+                sender_raw = next((h['value'] for h in headers if h['name'] ==
+                                   'From'), constants['constant2'])
+                date_str = next((h['value'] for h in headers if h['name'] == 'Date'), '')
+                sender_clean = sender_raw.split('<')[0].strip().replace('"', '') if '<' in sender_raw else sender_raw
+
+                clean_emails.append({
+                    "id": msg['id'],
+                    "subject": subject,
+                    "sender": sender_clean,
+                    "date": date_str,
+                    "snippet": email_meta.get('snippet', ''),
+                })
+
+            except Exception as inner_e:
+                logger.warning(f"Failed to parse Gmail message {msg['id']} for user {user_id}: {inner_e}")
+                sentry_sdk.capture_message(f"Failed to parse Gmail message {msg['id']} during search", level="warning")
+                continue
+
+        logger.info(f"Gmail search returned {len(clean_emails)} messages for user {user_id}")
+        return clean_emails
+
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        logger.error(f"Gmail search error for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Gmail search failed.")
 
 @router.get("/gmail/{message_id}")
 def get_email_content(
@@ -189,3 +281,4 @@ def mark_email_as_read(
             status_code=500,
             detail="Failed to update email status. The message may have been moved or deleted."
         )
+

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.config import TODOIST_TOKEN,logger,sentry_sdk
 from app.models import TaskItem
-from typing import Dict,Any,List
+from typing import Dict,Any,List,Optional
 from app.models import TodoistTaskResponse
 
 router = APIRouter(prefix="/dashboard/todoist", tags=["Todoist"])
@@ -44,6 +44,47 @@ def get_todoist_tasks(
         sentry_sdk.capture_exception(e)
         return []
 
+@router.get("/tasks/search", response_model=List[TodoistTaskResponse])
+def search_todoist_tasks(
+    q: Optional[str],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> List[Dict[str, Any]]:
+    """
+    Search Todoist tasks using Todoist's filter language.
+
+    You can search by free text (`q`), which internally becomes `filter=search: YOUR_TEXT`.
+
+    Args:
+        q: Free‑text search term.
+        current_user: Authenticated user (injected).
+
+    Returns:
+        List of tasks matching the search criteria.
+
+    Raises:
+        HTTPException(500): If the Todoist API request fails.
+    """
+    resp= None
+    try:
+        headers = get_todoist_headers()
+
+        if q:
+            params = {"query": f"search: {q}"}
+            resp = requests.get("https://api.todoist.com/api/v1/tasks/filter", headers=headers, params=params)
+
+        resp.raise_for_status()
+        data = resp.json()
+        tasks = data.get("results", [])
+        logger.info(f"Todoist search returned {len(tasks)} tasks for {current_user.get('email')} with q='{q}'")
+        return tasks
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Todoist search failed: {e}")
+        sentry_sdk.capture_exception(e)
+        raise HTTPException(status_code=500, detail="Todoist search failed.")
+    except Exception as e:
+        logger.critical(f"Unexpected error in search_todoist_tasks: {e}", exc_info=True)
+        sentry_sdk.capture_exception(e)
+        raise HTTPException(status_code=500, detail="Internal server error.")
 
 @router.post("/tasks")
 def add_todoist_task(

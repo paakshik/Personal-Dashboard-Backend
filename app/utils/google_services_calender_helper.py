@@ -5,7 +5,7 @@ from app.services.google_auth import get_user_google_creds
 from app.dependencies import get_current_user
 from fastapi import Depends, HTTPException, status
 from app.config import logger,sentry_sdk
-from typing import Any,List,Dict
+from typing import Any,List,Dict,Optional
 
 time_default = '+00:00'
 
@@ -151,6 +151,38 @@ def classify_events_by_date(raw_events: List[Dict[str, Any]]) -> List[Dict[str, 
             continue
     return [classified_events[k] for k in sorted(classified_events.keys())]
 
+def search_calendar_events(
+    service: Any,
+    q: Optional[str] = None,
+    max_results: int = 50
+) -> List[Dict[str, Any]]:
+    """
+    Search Google Calendar events with optional keyword and time range.
+
+    Args:
+        service: Authenticated Calendar service.
+        q: Search term (matches summary, description, location).
+        max_results: Maximum number of events to fetch (max 2500).
+
+    Returns:
+        List of raw event items from Google.
+    """
+    params = {
+        'calendarId': 'primary',
+        'singleEvents': True,
+        'orderBy': 'startTime',
+        'maxResults': min(max_results, 2500)  # enforce API limit
+    }
+    if q:
+        params['q'] = q
+    try:
+        events_result = service.events().list(**params).execute()
+        events = events_result.get('items', [])
+        logger.info(f"Calendar search returned {len(events)} events with q='{q}'")
+        return events
+    except Exception as e:
+        logger.error(f"Calendar search failed: {e}")
+        raise e
 
 def format_datetime(datetime_str: str) -> str:
     """

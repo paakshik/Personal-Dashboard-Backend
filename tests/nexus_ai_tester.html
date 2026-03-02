@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus AI — Full Feature Tester</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #080c10;
+      --surface:   #0d1117;
+      --border:    #1e2a38;
+      --accent:    #00f2ff;
+      --accent2:   #ff00ff;
+      --accent3:   #39ff14;
+      --warn:      #ffaa00;
+      --danger:    #ff3c3c;
+      --text:      #c9d1d9;
+      --muted:     #4a5568;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      grid-template-rows: 56px 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+    .logo { font-size: 1rem; font-weight: 800; letter-spacing: 0.08em; color: var(--accent); }
+    .logo span { color: var(--accent2); }
+    #ws-status {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: #1a0505;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      transition: all 0.3s;
+    }
+    #ws-status.on { background:#001a0a; border-color:var(--accent3); color:var(--accent3); }
+    aside {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      overflow-y: auto;
+    }
+    aside::-webkit-scrollbar { width: 3px; }
+    aside::-webkit-scrollbar-thumb { background: var(--border); }
+    .slabel {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    input[type="text"], input[type="password"], textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+    }
+    input:focus, textarea:focus { border-color: var(--accent); }
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; padding: 9px 14px; border: none; border-radius: 8px;
+      font-family: 'Space Mono', monospace; font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.04em;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed !important; }
+    .bp { background: var(--accent);  color: #000; }
+    .bp:hover:not(:disabled) { filter: brightness(1.15); }
+    .bd { background: transparent; border: 1px solid var(--danger);  color: var(--danger); }
+    .bd:hover:not(:disabled) { background: var(--danger); color: #fff; }
+    .bg { background: transparent; border: 1px solid var(--border);  color: var(--text); }
+    .bg:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .bm { background: var(--accent2); color: #000; }
+    .bm:hover:not(:disabled) { filter: brightness(1.15); }
+    .bn { background: var(--accent3); color: #000; }
+    .bn:hover:not(:disabled) { filter: brightness(1.1); }
+    .file-label {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 9px 14px;
+      background: var(--bg); border: 1px dashed var(--border); border-radius: 8px;
+      font-family: 'Space Mono', monospace; font-size: 0.72rem; color: var(--muted);
+      cursor: pointer; transition: border-color 0.2s, color 0.2s;
+    }
+    .file-label:hover { border-color: var(--accent2); color: var(--accent2); }
+    input[type="file"] { display: none; }
+    #file-id-badge {
+      font-family: 'Space Mono', monospace; font-size: 0.63rem;
+      padding: 6px 10px; background: #001a0a;
+      border: 1px solid var(--accent3); border-radius: 8px;
+      color: var(--accent3); word-break: break-all; display: none; margin-top: 8px;
+    }
+    #history-panel {
+      border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+      max-height: 180px; overflow-y: auto;
+      font-family: 'Space Mono', monospace; font-size: 0.63rem;
+      padding: 8px; display: none; flex-direction: column; gap: 4px;
+    }
+    .hist-msg { padding: 4px 8px; border-radius: 4px; line-height: 1.4; white-space: pre-wrap; }
+    .hist-msg.user      { background:#001220; color:var(--accent);  border-left:2px solid var(--accent); }
+    .hist-msg.assistant { background:#0d0d0d; color:var(--text);    border-left:2px solid var(--muted); }
+    .hist-msg.system    { background:#1a0015; color:var(--accent2); border-left:2px solid var(--accent2); }
+    main { display: flex; flex-direction: column; overflow: hidden; }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .tab {
+      padding: 12px 22px; font-family: 'Space Mono', monospace; font-size: 0.7rem;
+      cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent;
+      transition: all 0.2s; letter-spacing: 0.05em;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-pane { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+    .tab-pane.active { display: flex; }
+    #chat-window {
+      flex: 1; overflow-y: auto; padding: 24px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    #chat-window::-webkit-scrollbar { width: 4px; }
+    #chat-window::-webkit-scrollbar-thumb { background: var(--border); }
+    .mrow { display: flex; gap: 10px; max-width: 75%; }
+    .mrow.user { align-self: flex-end; flex-direction: row-reverse; }
+    .mrow.sys  { align-self: center; max-width: 100%; }
+    .av {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; flex-shrink: 0;
+    }
+    .av.ai   { background:#001a1f; border:1px solid var(--accent);  color:var(--accent); }
+    .av.user { background:#1a0030; border:1px solid var(--accent2); color:var(--accent2); }
+    .bbl {
+      padding: 10px 14px; border-radius: 12px;
+      font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+    }
+    .bbl.ai   { background:var(--surface); border:1px solid var(--border); border-top-left-radius:2px; }
+    .bbl.user { background:#1a0030;       border:1px solid var(--accent2); border-top-right-radius:2px; }
+    .bbl.sys  {
+      font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted);
+      background:transparent; border:1px solid var(--border); border-radius:8px;
+      padding:5px 12px; width:100%; text-align:center;
+    }
+    .bbl.search { color:var(--warn);   border-color:var(--warn);   background:#1a1000; }
+    .bbl.err    { color:var(--danger); border-color:var(--danger); background:#1a0000; }
+    .bbl.ok     { color:var(--accent3);border-color:var(--accent3);background:#001a0a; }
+    .ts { font-family:'Space Mono',monospace; font-size:0.58rem; color:var(--muted); margin-top:4px; }
+    .mrow.user .ts { text-align:right; }
+    .input-bar {
+      padding: 14px 24px; background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+    #prompt-input { flex: 1; min-height: 44px; max-height: 120px; padding: 10px 14px; }
+    #attach-bar {
+      padding: 0 24px 8px;
+      font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--accent3);
+      display: none;
+    }
+    .empty-state {
+      flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:12px; color:var(--muted);
+    }
+    .empty-state .icon { font-size:2.5rem; }
+    .empty-state p { font-family:'Space Mono',monospace; font-size:0.72rem; text-align:center; line-height:1.9; }
+    #raw-log {
+      flex:1; overflow-y:auto; padding:16px 20px;
+    }
+    #raw-pre {
+      font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--accent3);
+      background:#000; border:1px solid var(--border); border-radius:8px;
+      padding:16px; min-height:100%; white-space:pre-wrap; word-break:break-all;
+    }
+    .divider { border:none; border-top:1px solid var(--border); }
+    .tag {
+      display:inline-block; font-family:'Space Mono',monospace; font-size:0.58rem;
+      padding:1px 6px; border-radius:4px; margin-left:5px; vertical-align:middle;
+    }
+    .tg { background:#001220; color:var(--accent);  }
+    .tp { background:#001a0a; color:var(--accent3); }
+    .td { background:#2d0000; color:var(--danger);  }
+    .tw { background:#1a0030; color:var(--accent2); }
+    .kw-hint {
+      font-family:'Space Mono',monospace; font-size:0.62rem;
+      color:var(--muted); line-height:1.8;
+    }
+    .kw-hint .kw { color:var(--warn); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">NEXUS<span>AI</span> &mdash; Full Feature Tester</div>
+  <span id="ws-status">● DISCONNECTED</span>
+</header>
+
+<!-- SIDEBAR -->
+<aside>
+
+  <div>
+    <div class="slabel">① Auth / WebSocket <span class="tag tw">WS</span></div>
+    <input type="password" id="token-input" placeholder="Paste JWT (no 'Bearer' prefix)…" style="margin-bottom:8px;">
+    <button class="btn bp" id="connect-btn" onclick="toggleWS()">Connect WebSocket</button>
+    <p style="font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:6px;">
+      Press Enter in token field to connect quickly.
+    </p>
+  </div>
+
+  <hr class="divider">
+
+  <div>
+    <div class="slabel">② Upload File <span class="tag tp">POST /upload</span></div>
+    <label class="file-label" for="file-input">
+      <span>📎</span> <span id="file-name">Choose a file…</span>
+    </label>
+    <input type="file" id="file-input" onchange="onFileSelected()">
+    <div style="height:8px;"></div>
+    <button class="btn bm" onclick="uploadFile()" id="upload-btn">Upload to Gemini</button>
+    <div id="file-id-badge"></div>
+  </div>
+
+  <hr class="divider">
+
+  <div>
+    <div class="slabel">③ Attach to Chat Message</div>
+    <input type="text" id="manual-fid" placeholder="Or paste file_id here…" style="margin-bottom:8px;">
+    <button class="btn bn" onclick="attachFile()">📌 Attach to Next Message</button>
+  </div>
+
+  <hr class="divider">
+
+  <div>
+    <div class="slabel">④ Chat History <span class="tag tg">GET</span><span class="tag td">DELETE</span></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <button class="btn bg" style="flex:1" onclick="fetchHistory()">Load</button>
+      <button class="btn bd" style="flex:1" onclick="clearHistory()">Clear</button>
+    </div>
+    <div id="history-panel"></div>
+  </div>
+
+  <hr class="divider">
+
+  <div>
+    <div class="slabel">⑤ Search Auto-Trigger (gemini_helper)</div>
+    <p class="kw-hint">
+      These words in your prompt enable Google Search in Gemini automatically:<br><br>
+      <span class="kw">current · today · now · latest · news · weather · stock · price · what is · who is · how to · 2024 · fact</span>
+    </p>
+  </div>
+
+</aside>
+
+<!-- MAIN -->
+<main>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('chat-pane',this)">💬 Chat Stream</div>
+    <div class="tab" onclick="switchTab('raw-pane',this)">📡 Raw WS Log</div>
+  </div>
+
+  <!-- CHAT PANE -->
+  <div id="chat-pane" class="tab-pane active">
+    <div id="chat-window">
+      <div class="empty-state" id="empty">
+        <div class="icon">⚡</div>
+        <p>
+          Paste your JWT token → Connect<br>
+          Then chat with Nexus AI.<br><br>
+          Upload a file (sidebar ②) and attach it (③)<br>
+          to test multimodal input.<br><br>
+          Load/clear history from sidebar ④.
+        </p>
+      </div>
+    </div>
+    <div id="attach-bar">
+      📎 Attached: <span id="attach-label"></span>
+      <button onclick="clearAttach()" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:10px;font-size:0.75rem;">✕ Remove</button>
+    </div>
+    <div class="input-bar">
+      <textarea id="prompt-input" placeholder="Type a message… (Enter = send · Shift+Enter = newline)" disabled
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+      <button class="btn bp" id="send-btn" onclick="sendMessage()" disabled style="width:80px;height:44px;flex-shrink:0;">Send</button>
+    </div>
+  </div>
+
+  <!-- RAW LOG PANE -->
+  <div id="raw-pane" class="tab-pane">
+    <div style="padding:14px 20px 0;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--muted);">Raw WebSocket frames & HTTP responses</span>
+      <button class="btn bg" style="width:auto;padding:5px 14px;" onclick="document.getElementById('raw-pre').textContent='// Cleared\n'">Clear</button>
+    </div>
+    <div id="raw-log">
+      <pre id="raw-pre">// Connect to start logging…
+</pre>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── STATE ──────────────────────────────────────
+let ws = null, activeFileId = null, currentAiDiv = null;
+const HTTP = 'http://localhost:8000';
+const WS   = 'ws://localhost:8000';
+
+// ── TAB SWITCH ─────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── WEBSOCKET ──────────────────────────────────
+function toggleWS() {
+  if (ws) { ws.close(); return; }
+  const token = document.getElementById('token-input').value.trim();
+  if (!token) { alert('Paste your JWT token first!'); return; }
+
+  ws = new WebSocket(`${WS}/dashboard/gemini/stream?token=${token}`);
+
+  ws.onopen = () => {
+    setStatus(true);
+    raw('▶ WebSocket CONNECTED');
+    clearEmpty();
+    sysMsg('Connected to Nexus AI stream ✓', 'ok');
+  };
+  ws.onmessage = e => {
+    raw(`← RECV: ${e.data}`);
+    handleStream(e.data);
+  };
+  ws.onclose = e => {
+    setStatus(false);
+    raw(`■ CLOSED (code: ${e.code})`);
+    ws = null; currentAiDiv = null;
+    if (e.code === 1008) sysMsg('❌ Auth failed — token invalid or expired', 'err');
+    else sysMsg(`WebSocket closed (code: ${e.code})`);
+  };
+  ws.onerror = () => raw('✕ WebSocket ERROR');
+}
+
+function handleStream(text) {
+  // Terminal marker — AI done
+  if (text === '[✓]') {
+    currentAiDiv = null;
+    addTs();
+    return;
+  }
+  // Special status messages from backend (gemini_helper.py)
+  if (text.startsWith('[🔍')) { sysMsg('🔍 Google Search triggered by keyword match…', 'search'); return; }
+  if (text.startsWith('[📎')) { sysMsg(text, 'search'); return; }
+  if (text.startsWith('[⚠️'))  { sysMsg(text, 'err');    return; }
+
+  // Streaming text chunk — build AI bubble incrementally
+  if (!currentAiDiv) currentAiDiv = makeAiBubble();
+  currentAiDiv.textContent += text;
+  scrollChat();
+}
+
+// ── SEND ───────────────────────────────────────
+function sendMessage() {
+  const inp = document.getElementById('prompt-input');
+  const text = inp.value.trim();
+  if (!text || !ws) return;
+
+  const payload = { prompt: text, attachment_id: activeFileId || null };
+  userMsg(text, !!activeFileId);
+  raw(`→ SEND: ${JSON.stringify(payload)}`);
+  ws.send(JSON.stringify(payload));
+  inp.value = '';
+  currentAiDiv = null;
+  if (activeFileId) clearAttach();
+}
+
+// ── FILE UPLOAD ────────────────────────────────
+//  Tests: POST /dashboard/gemini/upload
+function onFileSelected() {
+  const f = document.getElementById('file-input').files[0];
+  if (f) document.getElementById('file-name').textContent = f.name;
+}
+
+async function uploadFile() {
+  const token = document.getElementById('token-input').value.trim();
+  const file  = document.getElementById('file-input').files[0];
+  if (!token) { alert('Enter JWT token first!'); return; }
+  if (!file)  { alert('Select a file first!'); return; }
+
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true; btn.textContent = 'Uploading…';
+  raw(`→ POST /dashboard/gemini/upload — "${file.name}"`);
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const res  = await fetch(`${HTTP}/dashboard/gemini/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: form
+    });
+    const data = await res.json();
+    raw(`← ${JSON.stringify(data, null, 2)}`);
+
+    if (res.ok) {
+      const badge = document.getElementById('file-id-badge');
+      badge.style.display = 'block';
+      badge.textContent = `✓ file_id: ${data.file_id}`;
+      document.getElementById('manual-fid').value = data.file_id;
+      clearEmpty();
+      sysMsg(`✓ Uploaded "${data.filename}" — file_id saved. Use ③ to attach.`, 'ok');
+    } else {
+      sysMsg(`✕ Upload failed: ${data.detail || res.status}`, 'err');
+    }
+  } catch (e) {
+    raw(`✕ Upload error: ${e}`);
+    sysMsg(`✕ Network error: ${e}`, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Upload to Gemini';
+  }
+}
+
+// ── ATTACH ─────────────────────────────────────
+function attachFile() {
+  const id = document.getElementById('manual-fid').value.trim();
+  if (!id) { alert('No file_id. Upload first or paste manually.'); return; }
+  activeFileId = id;
+  const short = id.length > 28 ? id.slice(0,28)+'…' : id;
+  document.getElementById('attach-bar').style.display  = 'block';
+  document.getElementById('attach-label').textContent  = short;
+  sysMsg(`📎 File attached — will be sent with your next message.`);
+}
+function clearAttach() {
+  activeFileId = null;
+  document.getElementById('attach-bar').style.display = 'none';
+}
+
+// ── HISTORY ────────────────────────────────────
+//  Tests: GET /dashboard/gemini/history
+async function fetchHistory() {
+  const token = document.getElementById('token-input').value.trim();
+  if (!token) { alert('Enter JWT token first!'); return; }
+  raw('→ GET /dashboard/gemini/history');
+
+  const res  = await fetch(`${HTTP}/dashboard/gemini/history`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await res.json();
+  raw(`← ${JSON.stringify(data, null, 2)}`);
+
+  const panel = document.getElementById('history-panel');
+  panel.innerHTML = '';
+  panel.style.display = 'flex';
+
+  if (!res.ok) {
+    panel.innerHTML = `<div style="color:var(--danger);font-family:'Space Mono',monospace;font-size:0.65rem;padding:8px;">${data.detail || 'Error'}</div>`;
+    return;
+  }
+  if (!Array.isArray(data) || data.length === 0) {
+    panel.innerHTML = `<div style="color:var(--muted);font-family:'Space Mono',monospace;font-size:0.65rem;text-align:center;padding:10px;">No history found.</div>`;
+    return;
+  }
+  data.slice(-30).forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `hist-msg ${msg.role || 'system'}`;
+    const ts  = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+    const txt = (msg.text || '').slice(0, 100) + ((msg.text||'').length > 100 ? '…' : '');
+    div.textContent = `[${(msg.role||'?').toUpperCase()}] ${ts}\n${txt}`;
+    panel.appendChild(div);
+  });
+}
+
+//  Tests: DELETE /dashboard/gemini/history
+async function clearHistory() {
+  const token = document.getElementById('token-input').value.trim();
+  if (!token) { alert('Enter JWT token first!'); return; }
+  if (!confirm('Delete all your chat history?')) return;
+  raw('→ DELETE /dashboard/gemini/history');
+
+  const res  = await fetch(`${HTTP}/dashboard/gemini/history`, {
+    method:'DELETE', headers:{ 'Authorization': `Bearer ${token}` }
+  });
+  const data = await res.json();
+  raw(`← ${JSON.stringify(data)}`);
+
+  document.getElementById('history-panel').style.display = 'none';
+  sysMsg(`🗑 ${data.message || 'History cleared.'}`, 'ok');
+}
+
+// ── UI HELPERS ─────────────────────────────────
+function setStatus(on) {
+  const el = document.getElementById('ws-status');
+  const btn = document.getElementById('connect-btn');
+  const inp = document.getElementById('prompt-input');
+  const snd = document.getElementById('send-btn');
+  if (on) {
+    el.textContent = '● CONNECTED'; el.className = 'on';
+    btn.textContent = 'Disconnect'; btn.className = 'btn bd';
+    inp.disabled = false; snd.disabled = false;
+  } else {
+    el.textContent = '● DISCONNECTED'; el.className = '';
+    btn.textContent = 'Connect WebSocket'; btn.className = 'btn bp';
+    inp.disabled = true; snd.disabled = true;
+  }
+}
+
+function clearEmpty() {
+  const e = document.getElementById('empty');
+  if (e) e.remove();
+}
+
+function makeAiBubble() {
+  const win = document.getElementById('chat-window');
+  const row = document.createElement('div'); row.className = 'mrow';
+  const av  = document.createElement('div'); av.className = 'av ai'; av.textContent = '⚡';
+  const col = document.createElement('div');
+  const bbl = document.createElement('div'); bbl.className = 'bbl ai';
+  col.appendChild(bbl); row.appendChild(av); row.appendChild(col);
+  win.appendChild(row); scrollChat();
+  return bbl;
+}
+
+function userMsg(text, hasFile) {
+  const win = document.getElementById('chat-window');
+  const row = document.createElement('div'); row.className = 'mrow user';
+  const av  = document.createElement('div'); av.className = 'av user'; av.textContent = '◎';
+  const col = document.createElement('div');
+  const bbl = document.createElement('div'); bbl.className = 'bbl user';
+  bbl.textContent = (hasFile ? '📎 ' : '') + text;
+  const ts  = document.createElement('div'); ts.className = 'ts'; ts.textContent = now();
+  col.appendChild(bbl); col.appendChild(ts);
+  row.appendChild(av); row.appendChild(col);
+  win.appendChild(row); scrollChat();
+}
+
+function sysMsg(text, type='') {
+  const win = document.getElementById('chat-window');
+  const row = document.createElement('div'); row.className = 'mrow sys';
+  const bbl = document.createElement('div');
+  bbl.className = 'bbl sys' + (type ? ' '+type : '');
+  bbl.textContent = text;
+  row.appendChild(bbl); win.appendChild(row); scrollChat();
+}
+
+function addTs() {
+  const rows = document.querySelectorAll('#chat-window .mrow:not(.user):not(.sys)');
+  const last = rows[rows.length - 1];
+  if (last) {
+    const col = last.children[1];
+    const ts  = document.createElement('div'); ts.className = 'ts'; ts.textContent = now();
+    col.appendChild(ts);
+  }
+}
+
+function raw(text) {
+  const el = document.getElementById('raw-pre');
+  el.textContent += `[${now()}] ${text}\n\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function scrollChat() {
+  const w = document.getElementById('chat-window'); w.scrollTop = w.scrollHeight;
+}
+
+function now() {
+  return new Date().toLocaleTimeString('en-US', { hour12: false });
+}
+
+// Enter to connect
+document.getElementById('token-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !ws) toggleWS();
+});
+</script>
+</body>
+</html>

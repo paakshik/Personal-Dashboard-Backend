@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.models import EventItem
 from app.config import logger,sentry_sdk
-from typing import List,Dict,Any
+from typing import List,Dict,Any,Optional
 from app.utils.google_services_calender_helper import (classify_events_by_date,
                                                        get_google_calendar_service,
-                                                       fetch_upcoming_events,format_datetime
-                                                       )
+                                                       fetch_upcoming_events,
+                                                       format_datetime,
+                                                       search_calendar_events as search_helper)
+
 
 router = APIRouter(prefix="/dashboard/calender", tags=["Google Services"])
 
@@ -41,13 +43,50 @@ def get_calendar_events(
         return classify_events_by_date(raw_events)
 
     except Exception as e:
-        # Graceful Degradation:
-        # If Google fails, we log it and return an empty list so the UI doesn't crash.
         logger.error(f"Error retrieving calendar events for User {user_id}: {e}")
         sentry_sdk.capture_exception(e)
         return []
 
-@router.post("/calendar/events", response_model=Dict[str, Any])
+@router.get("/events/search", response_model=List[Dict[str, Any]])
+def search_calendar_events(
+    q: Optional[str],
+    max_results: int,
+    service: Any = Depends(get_google_calendar_service),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> List[Dict[str, Any]]:
+    """
+    Search the user's primary Google Calendar events.
+
+    This endpoint uses Google Calendar's built‑in search (`q` parameter) to filter
+    events by title, description, and location. You can also restrict the time window
+    with `timeMin` and `timeMax`. The results are grouped by date for easy display.
+
+    Args:
+        q: Optional search keyword.
+        max_results: Maximum number of events (1‑2500).
+        service: Authenticated Calendar service (injected).
+        current_user: Authenticated user (injected).
+
+    Returns:
+        List of date‑grouped events (same structure as `GET /events`).
+    """
+    user_id = current_user.get("id", "unknown")
+    logger.info(f"User {user_id} searching calendar events with q='{q}'")
+
+    try:
+        raw_events = search_helper(
+            service=service,
+            q=q,
+            max_results=max_results
+        )
+        return classify_events_by_date(raw_events)
+
+    except Exception as e:
+        logger.error(f"Calendar search failed for user {user_id}: {e}")
+        sentry_sdk.capture_exception(e)
+        return []
+
+@router.post("/events", response_model=Dict[str, Any])
 def add_calendar_event(
     event: EventItem,
     service: Any = Depends(get_google_calendar_service),
@@ -129,7 +168,7 @@ def add_calendar_event(
 
 
 
-@router.put("/calendar/events/{event_id}", response_model=Dict[str, Any])
+@router.put("/events/{event_id}", response_model=Dict[str, Any])
 def update_calendar_event(
     event_id: str,
     event: EventItem,
@@ -199,7 +238,7 @@ def update_calendar_event(
         )
 
 
-@router.delete("/calendar/events/{event_id}")
+@router.delete("/events/{event_id}")
 def delete_calendar_event(
         event_id: str,
         service: Any = Depends(get_google_calendar_service),
