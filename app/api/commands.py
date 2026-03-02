@@ -1,14 +1,14 @@
 import uuid
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List
 from app.dependencies import get_current_user
 from app.utils.file_ops import read_json_file, write_json_file, COMMANDS_FILE
 from app.models import CommandItem, CommandInDB
-from typing import Dict,Any
+from typing import Dict,Any,Optional,List
 from app.config import logger,sentry_sdk
 import re
 import subprocess
+
 router = APIRouter(prefix="/dashboard/commands", tags=["Commands"])
 
 
@@ -186,6 +186,56 @@ def delete_command(
         )
 
 
+@router.get("/search", response_model=List[CommandInDB])
+def search_commands(
+    q: Optional[str],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> List[CommandInDB]:
+    """
+    Search the authenticated user's commands.
+
+    This endpoint returns a filtered list of commands belonging to the current user.
+    The search can be performed using one or both of the following query parameters:
+
+    - **q**: A general search term that is matched (case‑insensitive) against:
+        - command name
+        - command content (the actual shell command)
+        - description
+        - each tag in the command's tag list
+
+    If no parameters are provided, the endpoint returns **all** commands for the user
+    (same as the main `GET /dashboard/commands` endpoint).
+
+    Args:
+        q (Optional[str]): General search keyword. Defaults to None.
+        current_user (Dict[str, Any]): The authenticated user (injected dependency).
+
+    Returns:
+        List[CommandInDB]: A list of command objects that match the search criteria.
+
+    Raises:
+        HTTPException: 500 if an unexpected error occurs while reading the commands file.
+    """
+    user_id = current_user.get("id")
+    logger.info(f"User {user_id} searching commands with q={q}")
+    commands_data = read_json_file(COMMANDS_FILE)
+
+    user_commands = [cmd for cmd in commands_data if cmd.get("user_id") == user_id]
+
+    if q:
+        q_lower = q.lower()
+        user_commands = [
+            cmd for cmd in user_commands
+            if (q_lower in cmd.get("name", "").lower() or
+                q_lower in cmd.get("command", "").lower() or
+                q_lower in cmd.get("description", "").lower() or
+                any(q_lower in tag.lower() for tag in cmd.get("tags", [])))
+        ]
+
+
+    logger.debug(f"Search returned {len(user_commands)} commands for user {user_id}")
+    return user_commands
+
 @router.get("/{command_id}", response_model=Dict[str, Any])
 def get_command(
         command_id: str,
@@ -194,7 +244,7 @@ def get_command(
     """
     Retrieves the details of a single command by its ID.
 
-    Iterates through the local storage to find a matching command ID.
+    Iterates through the JSON file to find a matching command ID.
     Returns 404 if the ID does not exist.
 
     Args:
@@ -234,7 +284,6 @@ def get_command(
         return command
 
     except HTTPException:
-        # Pass 404s through without logging them as system errors
         raise
 
     except Exception as e:
