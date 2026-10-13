@@ -15,11 +15,7 @@ import sentry_sdk
 import google.genai as genai
 import logging
 
-# Load environment variables
 load_dotenv()
-
-
-# Helper functions
 def setup_logging(log_dir_name: str = "logs") -> logging.Logger:
     """
     Configure and return a production-ready application logger.
@@ -46,31 +42,22 @@ def setup_logging(log_dir_name: str = "logs") -> logging.Logger:
 
     """
     project_root = Path(__file__).resolve().parent.parent
-    # ✅ FIXED: Now actually uses the parameter
     log_dir = project_root / log_dir_name
-
-    # 2. Create directory if it doesn't exist
     log_dir.mkdir(exist_ok=True)
-
-    # 3. Configure root logger
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%H:%M:%S',
         handlers=[
-            logging.StreamHandler(sys.stdout),  # Print to terminal
-            logging.FileHandler(log_dir / "app.log")  # Save to file
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler(log_dir / "app.log")
         ]
     )
-
-    # 4. Create application logger
     logger_main = logging.getLogger("Personal Dashboard")
     logger_main.info("Logging system initialized from config")
     logger_main.debug(f"Log directory: {log_dir}")
-
     return logger_main
 
-# for setting up  logger
 logger = setup_logging()
 
 def require_env(key: str) -> str:
@@ -135,8 +122,6 @@ AUTHLIB_INSECURE_TRANSPORT = optional_env("AUTHLIB_INSECURE_TRANSPORT", "0")
 CREDENTIALS_FILE = optional_env("CREDENTIALS_FILE", "credentials.json")
 BACKEND_REDIRECT_URI = optional_env("BACKEND_REDIRECT_URI")
 
-
-# --- Google Configuration ---
 GOOGLE_CLIENT_ID = require_env("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = require_env("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = require_env("GOOGLE_REDIRECT_URI")
@@ -170,7 +155,6 @@ COMMANDS_FILE = DATA_DIR / "commands.json"
 CHAT_HISTORY_FILE = DATA_DIR / "chat-data.json"
 SYSTEM_METRICS_FILE = DATA_DIR / "system_metrics.json"
 
-# --- Todoist Configuration ---
 TODOIST_TOKEN = optional_env("TODOIST_TOKEN")
 
 SENTRY_DSN = optional_env("SENTRY_DSN")
@@ -179,6 +163,6 @@ if SENTRY_DSN:
         dsn=SENTRY_DSN,
         environment=optional_env("ENVIRONMENT", "production"),
         traces_sample_rate=0.1,
-        send_default_pii=False,  # Change to False for GDPR compliance
+        send_default_pii=False,
     )
 logger.info("Sentry monitoring initialized")

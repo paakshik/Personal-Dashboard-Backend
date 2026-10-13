@@ -58,8 +58,7 @@ def search_calendar_events(
     Search the user's primary Google Calendar events.
 
     This endpoint uses Google Calendar's built‑in search (`q` parameter) to filter
-    events by title, description, and location. You can also restrict the time window
-    with `timeMin` and `timeMax`. The results are grouped by date for easy display.
+    events by title, description, and location.
 
     Args:
         q: Optional search keyword.
