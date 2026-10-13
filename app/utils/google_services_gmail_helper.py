@@ -5,7 +5,7 @@ from googleapiclient.discovery import build
 from app.config import logger, sentry_sdk
 from app.dependencies import get_current_user
 from app.services.google_auth import get_user_google_creds
-
+import asyncio
 
 def get_gmail_service(
         current_user: Dict[str, Any] = Depends(get_current_user)
@@ -110,3 +110,30 @@ def get_email_body(payload: Dict[str, Any]) -> str:
         return "Error: Could not decode this email's content."
 
     return "No content available for this message."
+
+async def fetch_email_body(service, message_id: str) -> str:
+    """
+        Fetches the full content of a specific Gmail message asynchronously.
+
+        Args:
+            service: The authorized Gmail API service instance (Resource object).
+            message_id: The unique ID of the Gmail message to retrieve.
+
+        Returns:
+            The parsed body of the email as a string. Returns a fallback
+            error message if the retrieval fails.
+    """
+    try:
+        # Capture message_id as a default to prevent any context shifting
+        message = await asyncio.to_thread(
+            lambda mid=message_id: service.users().messages().get(
+                userId='me', id=mid, format='full'
+            ).execute()
+        )
+        return get_email_body(message)
+    except Exception as e:
+        logger.error(f"Failed to fetch email body: {e}")
+        with sentry_sdk.push_scope() as scope:
+            scope.set_tag("message_id", message_id)
+            sentry_sdk.capture_exception(e)
+        return "Error retrieving body."

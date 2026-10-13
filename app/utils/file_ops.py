@@ -8,93 +8,6 @@ from app.config import (USERS_FILE, TOKENS_FILE, PROJECTS_FILE, COMMANDS_FILE,
 from pathlib import Path
 from typing import Any, Union, List, Dict
 
-# Add this to app/utils/file_ops.py
-
-def init_data_files(data_dir: Path = None) -> None:
-    """
-    Initialize all required JSON data files if they don't exist.
-
-    This function is called once at application startup to ensure all
-    storage files exist with valid JSON structure. It creates empty
-    files if they're missing.
-
-    Args:
-        data_dir (Path): Optional custom data directory. If None, uses
-                        DATA_DIR from config.
-
-    Returns:
-        None
-
-    Raises:
-        PermissionError: If the data directory cannot be created due to
-                        insufficient permissions.
-        OSError: For other filesystem-related errors.
-
-    Side Effects:
-        Creates files in dashboard_data/ directory:
-        - users.json (list of user objects)
-        - tokens.json (dict of user_id -> tokens)
-        - projects.json (list of project objects)
-        - commands.json (list of command objects)
-        - chat-data.json (list of chat messages)
-        - system_metrics.json (list of system metrics)
-    """
-    from app.config import (
-        DATA_DIR,
-        USERS_FILE,
-        TOKENS_FILE,
-        PROJECTS_FILE,
-        COMMANDS_FILE,
-        CHAT_HISTORY_FILE,
-        SYSTEM_METRICS_FILE,
-        logger,
-        sentry_sdk
-    )
-
-    try:
-        # 1. Create data directory if it doesn't exist
-        if not DATA_DIR.exists():
-            DATA_DIR.mkdir(parents=True, exist_ok=True)
-            logger.info(f"✅ Created data directory: {DATA_DIR}")
-
-        # 2. Define files and their default structures
-        files_to_init = {
-            USERS_FILE: [],                    # List of user objects
-            TOKENS_FILE: {},                   # Dict: user_id -> token object
-            PROJECTS_FILE: [],                 # List of project objects
-            COMMANDS_FILE: [],                 # List of command objects
-            CHAT_HISTORY_FILE: {},             # Dict: user_id -> list of messages
-            SYSTEM_METRICS_FILE: []            # List of metric snapshots
-        }
-
-        # 3. Create files if they don't exist
-        for file_path, default_content in files_to_init.items():
-            if not file_path.exists():
-                write_json_file(file_path, default_content, verbose=False)
-                logger.debug(f"✅ Initialized: {file_path.name}")
-            else:
-                logger.debug(f"✓ Already exists: {file_path.name}")
-
-        logger.info("✅ All data files initialized successfully")
-
-    except PermissionError as e:
-        error_msg = f"Permission denied creating data directory: {e}"
-        logger.critical(error_msg)
-        sentry_sdk.capture_exception(e)
-        raise PermissionError(error_msg) from e
-
-    except OSError as e:
-        error_msg = f"Filesystem error during data file initialization: {e}"
-        logger.critical(error_msg)
-        sentry_sdk.capture_exception(e)
-        raise OSError(error_msg) from e
-
-    except Exception as e:
-        error_msg = f"Unexpected error initializing data files: {e}"
-        logger.critical(error_msg)
-        sentry_sdk.capture_exception(e)
-        raise RuntimeError(error_msg) from e
-
 def read_json_file(file_path: Union[str, Path]) -> Union[
     List[Any], Dict[str, Any], None]:
     """
@@ -117,19 +30,42 @@ def read_json_file(file_path: Union[str, Path]) -> Union[
     """Read JSON file, return default if file doesn't exist or is invalid"""
     path_obj = Path(file_path)
 
+    # 1. LAZY INIT: Check if file exists
     if not path_obj.exists():
-        if path_obj in [USERS_FILE, PROJECTS_FILE, COMMANDS_FILE, CHAT_HISTORY_FILE,SYSTEM_METRICS_FILE]:
-            logger.warning(f"File {path_obj} doesn't exist or is invalid")
-            return []
-        elif path_obj == TOKENS_FILE:
-            logger.warning(f"File {path_obj} doesn't exist or is invalid")
-            return {}
+        default_data = None
+
+        # Determine default structure based on file type
+        if path_obj == TOKENS_FILE:
+            default_data = {}
+        elif path_obj in [USERS_FILE, PROJECTS_FILE, COMMANDS_FILE, CHAT_HISTORY_FILE,
+                          SYSTEM_METRICS_FILE]:
+            default_data = []
+
+        # If it's a known file type, create it physically now
+        if default_data is not None:
+            try:
+                # Ensure the folder exists (e.g., dashboard_data/)
+                path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+                # Create the actual file with empty JSON
+                with open(path_obj, 'w',encoding='utf-8') as f:
+                    json.dump(default_data, f)
+
+                logger.info(f"Lazy Initialized new data file: {path_obj}")
+                return default_data
+            except OSError as e:
+                logger.error(f"Failed to lazy create {path_obj}: {e}")
+                return default_data  # Return in-memory empty data as fallback
+
         return None
+
+    # 2. Normal Read
     try:
-        with open(path_obj, 'r') as f:
+        with open(path_obj, 'r', encoding='utf-8') as f:
             return json.load(f)
     except (json.JSONDecodeError, IOError) as e:
         logger.error(f"Error reading {path_obj}: {e}")
+        # Return safe defaults if file is corrupted
         if path_obj == TOKENS_FILE:
             return {}
         return []
@@ -198,7 +134,7 @@ def upload_bytes_to_drive(
                    (Note: Permission errors are logged but do NOT raise an exception).
     """
     try:
-        logger.info(f"📂 Starting Drive upload for user {user_id}: '{filename}'")
+        logger.info(f"Starting Drive upload for user {user_id}: '{filename}'")
 
         # 1. Validation Logic
         all_tokens = read_json_file(TOKENS_FILE)
@@ -226,7 +162,7 @@ def upload_bytes_to_drive(
         ).execute()
 
         file_id = uploaded_file.get('id')
-        logger.info(f"✅ File uploaded successfully. ID: {file_id}")
+        logger.info(f"File uploaded successfully. ID: {file_id}")
 
         # 5. Set Permissions (Public Read)
         try:
@@ -236,7 +172,7 @@ def upload_bytes_to_drive(
             ).execute()
         except Exception as perm_error:
             # We log this but do NOT raise it, because the file IS uploaded.
-            logger.error(f"⚠️ Permissions error for {file_id}: {perm_error}")
+            logger.error(f"Permissions error for {file_id}: {perm_error}")
             sentry_sdk.capture_exception(perm_error)
 
         return uploaded_file
@@ -244,5 +180,5 @@ def upload_bytes_to_drive(
     except Exception as e:
         # Capture critical failures that stop the upload
         sentry_sdk.capture_exception(e)
-        logger.error(f"❌ Upload Failure for '{filename}': {str(e)}")
+        logger.error(f"Upload Failure for '{filename}': {str(e)}")
         raise e

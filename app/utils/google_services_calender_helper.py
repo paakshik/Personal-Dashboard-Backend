@@ -5,7 +5,7 @@ from app.services.google_auth import get_user_google_creds
 from app.dependencies import get_current_user
 from fastapi import Depends, HTTPException, status
 from app.config import logger,sentry_sdk
-from typing import Any,List,Dict
+from typing import Any,List,Dict,Optional
 
 time_default = '+00:00'
 
@@ -150,3 +150,58 @@ def classify_events_by_date(raw_events: List[Dict[str, Any]]) -> List[Dict[str, 
             sentry_sdk.capture_exception(e)
             continue
     return [classified_events[k] for k in sorted(classified_events.keys())]
+
+def search_calendar_events(
+    service: Any,
+    q: Optional[str] = None,
+    max_results: int = 50
+) -> List[Dict[str, Any]]:
+    """
+    Search Google Calendar events with optional keyword and time range.
+
+    Args:
+        service: Authenticated Calendar service.
+        q: Search term (matches summary, description, location).
+        max_results: Maximum number of events to fetch (max 2500).
+
+    Returns:
+        List of raw event items from Google.
+    """
+    params = {
+        'calendarId': 'primary',
+        'singleEvents': True,
+        'orderBy': 'startTime',
+        'maxResults': min(max_results, 2500)  # enforce API limit
+    }
+    if q:
+        params['q'] = q
+    try:
+        events_result = service.events().list(**params).execute()
+        events = events_result.get('items', [])
+        logger.info(f"Calendar search returned {len(events)} events with q='{q}'")
+        return events
+    except Exception as e:
+        logger.error(f"Calendar search failed: {e}")
+        raise e
+
+def format_datetime(datetime_str: str) -> str:
+    """
+    Formats the datetime string to ISO format for Google Calendar.
+
+    Args:
+        datetime_str (str): The datetime string to format (e.g., "2024-01-01T12:00:00Z").
+
+    Returns:
+        str: The formatted datetime string in ISO format (e.g., "2024-01-01T12:00:00").
+    """
+    # Handle "Z" and make sure the "T" separator is present
+    if datetime_str.endswith("Z"):
+        datetime_str = datetime_str[:-1]  # Remove "Z"
+    if "T" not in datetime_str:
+        datetime_str = datetime_str.replace(" ", "T")  # Replace space with "T"
+    try:
+        # Parse the datetime string and format it to remove the timezone info
+        return datetime.fromisoformat(datetime_str).isoformat()
+    except ValueError:
+        # Handle potential parsing errors
+        raise ValueError(f"Invalid datetime format: {datetime_str}")

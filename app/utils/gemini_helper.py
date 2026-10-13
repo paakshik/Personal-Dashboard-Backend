@@ -3,16 +3,14 @@ import uuid
 from app.utils.file_ops import read_json_file,write_json_file
 from typing import Optional
 import asyncio
-import google.generativeai as genai
+import google.genai as genai
 from fastapi import  WebSocket
 from app.config import logger,sentry_sdk,CHAT_HISTORY_FILE
 from datetime import datetime, timezone
 from app.utils.google_services_calender_helper import fetch_upcoming_events, get_google_calendar_service
-from app.utils.google_services_gmail_helper import get_gmail_service
+from app.utils.google_services_gmail_helper import get_gmail_service,fetch_email_body
 from app.api.todoist import get_todoist_tasks
 from typing import Dict, Any,List
-
-
 
 def save_chat_message(
         role: str,
@@ -159,40 +157,57 @@ async def gather_user_context(current_user: Dict[str, Any]) -> str:
     )
 
     try:
-        # 1. Fetch Todoist Tasks (Offloaded to thread)
-        tasks = await asyncio.to_thread(get_todoist_tasks)
-
-        # 2. Initialize Google Services
-        # Note: We pass current_user directly to bypass the Depends() mechanism
+        tasks = await asyncio.to_thread(get_todoist_tasks,current_user)
         cal_service = get_google_calendar_service(current_user)
         gmail_service = get_gmail_service(current_user)
+        if tasks and isinstance(tasks, list):
+            task_list = [f"- {t.get('content', str(t))}" if isinstance(t,
+                                                                       dict) else f"- {str(t)}"
+                         for t in tasks]
+            formatted_tasks = "\n".join(task_list)
+        else:
+            formatted_tasks = "No pending tasks"
 
-        # 3. Fetch Calendar Events (Offloaded to thread)
-        calendar_events = await asyncio.to_thread(fetch_upcoming_events, cal_service, 7)
-
-        # 4. Fetch Gmail Messages (Offloaded to thread)
-        # We use a lambda to wrap the synchronous .execute() call
+        calendar_events = await asyncio.to_thread(fetch_upcoming_events, cal_service,
+                                    90)
+        formatted_calendar = "\n".join(
+            [f"- {e.get('start', {}).get('dateTime', 'All Day')}: {e.get('summary')}"
+             for e in calendar_events]) if calendar_events else "No events."
+        email_context  =[]
         gmail_results = await asyncio.to_thread(
             lambda: gmail_service.users().messages().list(userId='me',
-                                                          maxResults=5).execute()
+                                                          maxResults=50).execute()
         )
         emails = gmail_results.get('messages', [])
+        for message in emails:
+            body = await fetch_email_body(gmail_service, message['id'])
 
-        logger.info(f"✅ Context successfully gathered for User: {user_id}")
+            # Get metadata for the header
+            meta = await asyncio.to_thread(lambda msg=message: gmail_service.users(
 
-        return f"""User Context for {user_email}:
-                    📅 Calendar: {str(calendar_events)[:500] if calendar_events else 'No upcoming events'}
-                    ✅ Tasks: {str(tasks)[:500] if tasks else 'No pending tasks'}
-                    📧 Emails: {str(emails)[:500] if emails else 'No recent emails'}
-                    """
+            ).messages().get(
+                userId='me', id=msg['id'], format='metadata',
+                metadataHeaders=['Subject', 'From', 'Date']).execute())
+
+            headers = meta.get('payload', {}).get('headers', [])
+            subject = next((h['value'] for h in headers if h['name'] == 'Subject'),
+                           'No Subject')
+            sender = next((h['value'] for h in headers if h['name'] == 'From'),
+                          'Unknown')
+            date = next((h['value'] for h in headers if h['name'] == 'Date'),
+                        'Unknown Date')
+            email_context.append(f"DATE: {date}\nFROM: {sender}\nSUBJECT: {subject}\nCONTENT: {body[:1000]}\n---")
+        formatted_emails = "\n".join(email_context) if email_context else "No recent emails."
+
+        logger.info(f"Context successfully gathered for User: {user_id}")
+
+        return f"""User Context for {user_email}:📅 Calendar: {str(formatted_calendar)[:5000] if calendar_events else 'No upcoming events'}
+✅ Tasks: {formatted_tasks[:5000] if tasks else 'No pending tasks'}📧 Emails: {formatted_emails[:5000] if emails else 'No recent emails'}
+"""
 
     except Exception as e:
-        # Log specifically which user's context failed
-        logger.warning(f"⚠️ Context gathering failed for {user_email}: {str(e)}")
-
-        # Capture the specific stack trace in Sentry
+        logger.warning(f"Context gathering failed for {user_email}: {str(e)}")
         sentry_sdk.capture_exception(e)
-
         return "⚠️ Personal context temporarily unavailable due to a service connection error."
 
 async def process_ai_attachment(
@@ -214,7 +229,8 @@ async def process_ai_attachment(
     """
     try:
         await websocket.send_text("[📎 Processing attachment...]")
-        return genai.get_file(attachment_id)
+        client = genai.Client()
+        return client.files.get(name=attachment_id)
     except Exception as e:
         logger.error(f"Attachment retrieval failed: {e}")
         sentry_sdk.capture_exception(e)
@@ -226,7 +242,7 @@ async def stream_gemini_response(
     websocket: WebSocket,
     model: Any,
     message_parts: List[Any],
-    tools: List[Dict[str, Any]]
+    config:Any
 ) -> str:
     """
     Streams the response from Gemini back to the client and returns the full text for history.
@@ -238,17 +254,27 @@ async def stream_gemini_response(
         websocket (WebSocket): The active connection to stream text to.
         model (Any): The initialized GenerativeModel instance.
         message_parts (List[Any]): Content parts (text, images, files) for the model.
-        tools (List[Dict[str, Any]]): List of tools (like Google Search) enabled for the request.
-
+        config(Any): Configuration object for the client.
     Returns:
         str: The concatenated string of the entire AI response.
     """
     full_response = ""
-    response = model.generate_content(message_parts, stream=True, tools=tools)
+    client = genai.Client()
+    try:
+        response_stream = await client.aio.models.generate_content_stream(
+            model=model,
+            contents=message_parts,
+            config=config
+        )
 
-    for chunk in response:
-        if chunk.text:
-            await websocket.send_text(chunk.text)
-            full_response += chunk.text
-            await asyncio.sleep(0)  # Prevents the event loop from blocking
-    return full_response
+        async for chunk in response_stream:
+            if chunk.text:
+                await websocket.send_text(chunk.text)
+                full_response += chunk.text
+                await asyncio.sleep(0.01)
+
+        return full_response
+    except Exception as e:
+        logger.error(f"Streaming failed: {e}")
+        await websocket.send_text(f"\n[⚠️ Error generating response: {str(e)}]")
+        return full_response

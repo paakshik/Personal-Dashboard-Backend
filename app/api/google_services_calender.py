@@ -2,9 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.models import EventItem
 from app.config import logger,sentry_sdk
-from typing import List,Dict,Any
+from typing import List,Dict,Any,Optional
 from app.utils.google_services_calender_helper import (classify_events_by_date,
-                                                       get_google_calendar_service,fetch_upcoming_events)
+                                                       get_google_calendar_service,
+                                                       fetch_upcoming_events,
+                                                       format_datetime,
+                                                       search_calendar_events as search_helper)
+
 
 router = APIRouter(prefix="/dashboard/calender", tags=["Google Services"])
 
@@ -39,45 +43,100 @@ def get_calendar_events(
         return classify_events_by_date(raw_events)
 
     except Exception as e:
-        # Graceful Degradation:
-        # If Google fails, we log it and return an empty list so the UI doesn't crash.
         logger.error(f"Error retrieving calendar events for User {user_id}: {e}")
         sentry_sdk.capture_exception(e)
         return []
 
-@router.post("/calendar/events", response_model=Dict[str, Any])
+@router.get("/events/search", response_model=List[Dict[str, Any]])
+def search_calendar_events(
+    q: Optional[str],
+    max_results: int,
+    service: Any = Depends(get_google_calendar_service),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> List[Dict[str, Any]]:
+    """
+    Search the user's primary Google Calendar events.
+
+    This endpoint uses Google Calendar's built‑in search (`q` parameter) to filter
+    events by title, description, and location. You can also restrict the time window
+    with `timeMin` and `timeMax`. The results are grouped by date for easy display.
+
+    Args:
+        q: Optional search keyword.
+        max_results: Maximum number of events (1‑2500).
+        service: Authenticated Calendar service (injected).
+        current_user: Authenticated user (injected).
+
+    Returns:
+        List of date‑grouped events (same structure as `GET /events`).
+    """
+    user_id = current_user.get("id", "unknown")
+    logger.info(f"User {user_id} searching calendar events with q='{q}'")
+
+    try:
+        raw_events = search_helper(
+            service=service,
+            q=q,
+            max_results=max_results
+        )
+        return classify_events_by_date(raw_events)
+
+    except Exception as e:
+        logger.error(f"Calendar search failed for user {user_id}: {e}")
+        sentry_sdk.capture_exception(e)
+        return []
+
+@router.post("/events", response_model=Dict[str, Any])
 def add_calendar_event(
     event: EventItem,
     service: Any = Depends(get_google_calendar_service),
     current_user: Dict[str, Any] = Depends(get_current_user)
-) -> dict[str, str | Any] | None:
+) -> Dict[str, Any]:
     """
-    Creates a new event in the user's primary Google Calendar.
+    Adds an event to the specified Google Calendar.
 
     Args:
-        event (EventItem): The Pydantic model containing summary, times, etc.
-        service (Any): The authenticated Google Calendar service (injected dependency).
         current_user (Dict[str, Any]): The authenticated user context.
+        event (EventItem): The new data (summary, description, times).
+        service (Any): The authenticated Google Calendar service (injected dependency).
 
     Returns:
-        Dict[str, Any]: Success status and the new Google Event ID.
+        dict: The created event data as a dictionary.
 
     Raises:
-        HTTPException (400): If the user hasn't linked their Google account.
-        HTTPException (400): If the data sent to Google is invalid (e.g., bad dates).
-        HTTPException (500): If the Google API fails unexpectedly.
+        HTTPException: If an error occurs during the API call or if the data is invalid.
     """
     user_id = current_user.get("id", "unknown")
-    logger.info(f"User {user_id} is attempting to create a calendar event: '{event.summary}'")
+    logger.info(
+        f"User {user_id} is attempting to create a calendar event: '{event.summary}'")
 
     try:
+        # 1. Parse and Format Dates (Crucial Fix for Google API 400 Error)
+        start_dt = event.start_time
+        if isinstance(start_dt, str):
+            start_dt = format_datetime(start_dt)
+
+        end_dt = event.end_time
+        if isinstance(end_dt, str):
+            end_dt = format_datetime(end_dt)
+
+        # 2. Validation: Ensure End is after Start
+        if start_dt >= end_dt:
+            raise HTTPException(status_code=400,
+                                detail="End time must be after start time")
 
         body = {
             'summary': event.summary,
             'description': event.description,
             'location': event.location,
-            'start': {'dateTime': event.start_time, 'timeZone': 'UTC'},
-            'end': {'dateTime': event.end_time, 'timeZone': 'UTC'},
+            'start': {
+                'dateTime': start_dt,
+                'timeZone': 'UTC'
+            },
+            'end': {
+                'dateTime': end_dt,
+                'timeZone': 'UTC'
+            },
         }
 
         # 4. Execute API Call
@@ -93,14 +152,23 @@ def add_calendar_event(
             "status": "success",
             "message": "Event added to calendar",
             "id": event_id,
-            "link": created_event.get('htmlLink') # Useful for opening the event immediately
+            "link": created_event.get('htmlLink')
         }
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         logger.error(f"Critical error creating event for User {user_id}: {e}")
         sentry_sdk.capture_exception(e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create event: {str(e)}"
+        )
 
-@router.put("/calendar/events/{event_id}", response_model=Dict[str, Any])
+
+
+@router.put("/events/{event_id}", response_model=Dict[str, Any])
 def update_calendar_event(
     event_id: str,
     event: EventItem,
@@ -170,7 +238,7 @@ def update_calendar_event(
         )
 
 
-@router.delete("/calendar/events/{event_id}")
+@router.delete("/events/{event_id}")
 def delete_calendar_event(
         event_id: str,
         service: Any = Depends(get_google_calendar_service),

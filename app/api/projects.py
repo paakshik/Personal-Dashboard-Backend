@@ -5,13 +5,13 @@ from typing import Dict, Any, List ,Optional
 from app.dependencies import get_current_user
 from app.utils.file_ops import (read_json_file, write_json_file, PROJECTS_FILE,
                                 logger,  sentry_sdk)
-from app.models import ProjectItem, ProjectInDB
+from app.models import ProjectItem, ProjectInDB,ProjectsDashboardResponse
 
 
 router = APIRouter(prefix="/dashboard/projects", tags=["Projects"])
 
 
-@router.get("/projects", response_model=ProjectInDB)
+@router.get("", response_model=ProjectsDashboardResponse)
 def get_dashboard_projects(current_user: dict = Depends(get_current_user)) -> Dict[
     str, Any]:
     """
@@ -82,7 +82,7 @@ def get_dashboard_projects(current_user: dict = Depends(get_current_user)) -> Di
             }
         }
 
-@router.post("/projects",response_model=ProjectItem)
+@router.post("",response_model=ProjectInDB)
 def create_project(
         project: ProjectItem,
         current_user: dict = Depends(get_current_user)
@@ -118,15 +118,12 @@ def create_project(
         project_id = str(uuid.uuid4())
         now_iso = datetime.now().isoformat()
 
-        # Set default lastUpdated if missing (Business Logic)
-        if not project.lastUpdated:
-            project.lastUpdated = datetime.now().strftime("%Y-%m-%d")
 
         # 4. Construct the Database Model
         # This is where the 'Ownership' is established
         new_project_model = ProjectInDB(
+            user_id=user_id,
             id=project_id,
-            user_id=user_id,  # <--- THE CRITICAL SECURITY TAG
             created_at=now_iso,
             updated_at=now_iso,
             **project.model_dump()
@@ -147,7 +144,7 @@ def create_project(
         logger.error(f"❌ Create project error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail="Internal server error while creating project."
+            detail=f"Failed to create project: {str(e)}"
         )
 
 @router.put("/{project_id}")
@@ -233,7 +230,7 @@ def update_project(
             detail="Internal server error during update."
         )
 
-@router.delete("{project_id}")
+@router.delete("/{project_id}")
 def delete_project(
     project_id: str,
     current_user: dict = Depends(get_current_user)

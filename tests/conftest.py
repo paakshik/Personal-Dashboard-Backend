@@ -1,199 +1,95 @@
-# tests/conftest.py - Updated version
 import pytest
-import asyncio
-from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch
 import os
 import sys
-import json
-import tempfile
 from pathlib import Path
-from datetime import datetime, timedelta
-from jose import jwt
+from fastapi.testclient import TestClient
+from unittest.mock import patch, DEFAULT
 
-# Add the parent directory to sys.path
+# 1. SETUP PATH & ENV VARS
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.main import app, init_data_files
-from app.dependencies import get_current_user
-
-# Test configuration
-os.environ["SECRET_KEY"] = "test-secret-key-for-tests-only"
-os.environ["GEMINI_API_KEY"] = "test-gemini-key"
-os.environ["TODOIST_TOKEN"] = "test-todoist-token"
+os.environ["SECRET_KEY"] = "test_secret_key"
 os.environ["ALGORITHM"] = "HS256"
 os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
-os.environ["FRONTEND_URL"] = "http://localhost:5173"
-os.environ["BACKEND_REDIRECT_URI"] = "http://localhost:8000/auth/google/callback"
+os.environ["DATA_DIR"] = "test_data"
 
-# Use temp directory for test data
-TEST_DATA_DIR = Path(tempfile.mkdtemp())
+from app.main import app
+from jose import jwt
+from datetime import datetime, timedelta, timezone
+from app.config import SECRET_KEY as APP_SECRET_KEY
 
-# Create a test user for all tests
-TEST_USER = {
-    "id": "test-user-123",
-    "google_id": "google-123",
-    "email": "test@example.com",
-    "name": "Test User",
-    "picture": "https://test.com/photo.jpg",
-    "created_at": "2024-01-01T00:00:00"
-}
 
-def create_test_token():
-    """Create a test JWT token"""
-    expire = datetime.utcnow() + timedelta(minutes=30)
+# --- FIXTURES ---
+
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as c:
+        yield c
+
+
+@pytest.fixture
+def mock_user_data():
+    return {
+        "id": "test_user_123",
+        "email": "tester@example.com",
+        "name": "Test User",
+        "picture": "http://example.com/pic.jpg"
+    }
+
+
+@pytest.fixture
+def auth_headers(mock_user_data):
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode = {
-        "sub": TEST_USER["id"],
-        "email": TEST_USER["email"],
+        "sub": mock_user_data["id"],
+        "email": mock_user_data["email"],
+        "name": mock_user_data["name"],
         "exp": expire
     }
-    return jwt.encode(to_encode, os.environ["SECRET_KEY"], algorithm=os.environ["ALGORITHM"])
+    token = jwt.encode(to_encode, APP_SECRET_KEY, algorithm="HS256")
+    return {"Authorization": f"Bearer {token}"}
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the session"""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-@pytest.fixture(autouse=True)
-def setup_test_data():
-    """Setup and teardown test data"""
-    # Backup original paths
-    from app.config import DATA_DIR
-    original_data_dir = DATA_DIR
-    
-    # Override with test directory
-    from app import config
-    config.DATA_DIR = TEST_DATA_DIR
-    config.USERS_FILE = TEST_DATA_DIR / "users.json"
-    config.TOKENS_FILE = TEST_DATA_DIR / "tokens.json"
-    config.PROJECTS_FILE = TEST_DATA_DIR / "projects.json"
-    config.COMMANDS_FILE = TEST_DATA_DIR / "commands.json"
-    config.CHAT_HISTORY_FILE = TEST_DATA_DIR / "chat-data.json"
-    
-    # Create test directory
-    TEST_DATA_DIR.mkdir(exist_ok=True)
-    
-    # Initialize with test user
-    init_data_files()
-    
-    # Write test user to users file
-    with open(config.USERS_FILE, 'w') as f:
-        json.dump([TEST_USER], f)
-    
-    # Write test token
-    test_token = create_test_token()
-    tokens_data = {
-        TEST_USER["id"]: {
-            "access_token": test_token,
-            "refresh_token": "test-refresh-token",
-            "expires_at": (datetime.utcnow() + timedelta(minutes=30)).isoformat()
-        }
-    }
-    with open(config.TOKENS_FILE, 'w') as f:
-        json.dump(tokens_data, f)
-    
-    yield
-    
-    # Restore original
-    config.DATA_DIR = original_data_dir
 
 @pytest.fixture
-def client():
-    """Test client fixture"""
-    return TestClient(app)
+def mock_file_ops(mock_user_data):
+    """
+    SMART MOCK - Patch read_json_file in dependencies.py
 
-@pytest.fixture
-def mock_google_creds():
-    """Mock Google credentials"""
-    with patch('main.Credentials') as mock_creds:
-        mock_instance = Mock()
-        mock_instance.token = "test-access-token"
-        mock_instance.expired = False
-        mock_instance.refresh_token = "test-refresh-token"
-        mock_instance.token_uri = "https://oauth2.googleapis.com/token"
-        mock_instance.client_id = "test-client-id"
-        mock_instance.client_secret = "test-client-secret"
-        mock_instance.scopes = ["test-scope"]
-        mock_creds.return_value = mock_instance
-        yield mock_instance
+    This handles:
+    1. User authentication (users.json)
+    2. Session validation (tokens.json)
+    3. Projects/Commands/etc (test-specific)
 
-@pytest.fixture
-def valid_token():
-    """Generate valid JWT token"""
-    return create_test_token()
+    Key principle: Patch WHERE it's imported, not where it's defined
+    """
+    with patch("app.dependencies.read_json_file") as mock_read:
 
-@pytest.fixture
-def authenticated_client(client, valid_token):
-    """Client with authentication header"""
-    # Override the get_current_user dependency
-    async def override_get_current_user():
-        return TEST_USER
-    
-    app.dependency_overrides[get_current_user] = override_get_current_user
-    
-    # Set auth header
-    client.headers.update({"Authorization": f"Bearer {valid_token}"})
-    
-    yield client
-    
-    # Clean up after test
-    app.dependency_overrides.clear()
-# tests/conftest.py - Add these fixtures
+        def smart_side_effect(arg):
+            path_str = str(arg)
 
-# Add these to your existing conftest.py file:
+            # 1. User authentication check
+            if "users.json" in path_str:
+                return [mock_user_data]
 
-@pytest.fixture
-def test_command_data():
-    """Create test command data"""
-    return {
-        "name": "Test Command",
-        "command": "echo 'test'",
-        "description": "A test command",
-        "category": "general",
-        "tags": ["test", "debug"]
-    }
+            # 2. SESSION CHECK (Critical for auth to pass)
+            if "tokens.json" in path_str:
+                return {
+                    mock_user_data["id"]: {
+                        "access_token": "test_google_token",
+                        "refresh_token": "test_refresh_token",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "client_id": "test_client_id",
+                        "client_secret": "test_client_secret",
+                        "scopes": []
+                    }
+                }
 
-@pytest.fixture
-def test_project_data():
-    """Create test project data"""
-    return {
-        "name": "Test Project",
-        "description": "A test project description",
-        "progress": 50,
-        "status": "in-progress",
-        "technologies": ["Python", "FastAPI"],
-        "category": "web",
-        "priority": "medium",
-        "lastUpdated": "2024-01-01",
-        "links": {
-            "github": "https://github.com/test",
-            "database": "",
-            "live": "",
-            "api": ""
-        }
-    }
+            # 3. Check if test set specific return value
+            if mock_read.return_value is not DEFAULT:
+                return mock_read.return_value
 
-@pytest.fixture
-def mock_current_user():
-    """Mock authenticated user"""
-    return {
-        "id": "test-user-123",
-        "email": "test@example.com",
-        "name": "Test User"
-    }
-# Add this fixture to your conftest.py file
-@pytest.fixture
-def fake_user():
-    """Create a fake user for testing"""
-    return {
-        "id": "test-user-id-123",
-        "email": "test@example.com",
-        "name": "Test User",
-        "google_id": "google-test-id-456"
-    }
-@pytest.fixture
-def fake_token():
-    """Create a fake JWT token for testing"""
-    return "fake.jwt.token.123"
+            # 4. Default: Let test decide
+            return DEFAULT
+
+        mock_read.side_effect = smart_side_effect
+        yield mock_read
