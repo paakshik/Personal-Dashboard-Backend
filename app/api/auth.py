@@ -5,6 +5,7 @@ from datetime import datetime, timedelta ,timezone
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from googleapiclient.discovery import build
+import time
 from typing import Dict, Any , Union  ,List
 from app.config import (
     GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI, USERS_FILE, TOKENS_FILE,
@@ -13,10 +14,15 @@ from app.config import (
 from app.utils.file_ops import read_json_file, write_json_file
 from app.services.google_auth import get_google_flow
 from app.dependencies import get_current_user
+
+_PENDING_OAUTH: Dict[str, Dict[str, Any]] = {}
+_OAUTH_TTL_SECONDS = 600
+
 # Router for all authentication endpoints
 router = APIRouter(prefix="/dashboard/auth/google", tags=["Authentication"])
 
 # it  initiates the Google login process (asks for permission)
+
 @router.get("/login")
 def login_google() -> Dict[str, str]:
     """
@@ -29,19 +35,41 @@ def login_google() -> Dict[str, str]:
     Raises:
         HTTPException: If there's an error creating the authorization URL
     """
+
     try:
-        flow = get_google_flow()
+        now = time.time()
+
+        # Remove expired login attempts
+        for old_state, entry in list(_PENDING_OAUTH.items()):
+            if now - entry["created_at"] > _OAUTH_TTL_SECONDS:
+                _PENDING_OAUTH.pop(old_state, None)
+
+        flow = get_google_flow(
+            autogenerate_code_verifier=True
+        )
         flow.redirect_uri = GOOGLE_REDIRECT_URI
-        auth_url, _ = flow.authorization_url(
+
+        auth_url, state = flow.authorization_url(
             access_type="offline",
             include_granted_scopes="true",
-            prompt="consent"
+            prompt="consent",
         )
+
+        if not flow.code_verifier:
+            raise RuntimeError("OAuth code verifier was not generated")
+
+        # Preserve the verifier for the callback, indexed by OAuth state
+        _PENDING_OAUTH[state] = {
+            "code_verifier": flow.code_verifier,
+            "created_at": now,
+        }
+
         return {"auth_url": auth_url}
+
     except Exception as e:
-        logger.error(str(e))
+        logger.exception("Google login setup failed")
         sentry_sdk.capture_exception(e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Could not start Google login")
 
 @router.get("/callback", response_model=None)
 def callback_google(request: Request) -> Union[RedirectResponse, JSONResponse]:
@@ -75,11 +103,32 @@ def callback_google(request: Request) -> Union[RedirectResponse, JSONResponse]:
         error = RuntimeError("Google OAuth callback received without authorization code")
         sentry_sdk.capture_exception(error)
         raise HTTPException(status_code=400, detail="Missing authorization code")
+        state = request.query_params.get("state")
+
+        if not state:
+            raise HTTPException(
+                status_code=400,
+                detail="Missing OAuth state"
+            )
+
+        pending = _PENDING_OAUTH.pop(state, None)
+
+        if (
+            pending is None
+            or time.time() - pending["created_at"] > _OAUTH_TTL_SECONDS
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="OAuth session expired or invalid. Please sign in again."
+            )
     try:
         logger.info("Processing Google OAuth callback")
-        flow = get_google_flow()
-        flow.redirect_uri = GOOGLE_REDIRECT_URI
-
+flow = get_google_flow(
+    state=state,
+    code_verifier=pending["code_verifier"],
+    autogenerate_code_verifier=False,
+)
+flow.redirect_uri = GOOGLE_REDIRECT_URI
         logger.debug(f"Using redirect URI: {GOOGLE_REDIRECT_URI}")
 
         # Custom client to allow scope changes during callback

@@ -12,7 +12,12 @@ from datetime import datetime, timedelta,timezone
 from typing import Optional, Dict, Any
 
 
-def get_google_flow() -> Flow:
+def get_google_flow(
+    *,
+    state: Optional[str] = None,
+    code_verifier: Optional[str] = None,
+    autogenerate_code_verifier: bool = True,
+) -> Flow:
     """
     Initialize and return a Google OAuth 2.0 flow instance.
 
@@ -27,6 +32,7 @@ def get_google_flow() -> Flow:
     Raises:
         ValueError: If required environment variables are missing
     """
+
     return Flow.from_client_config(
         {
             "web": {
@@ -38,8 +44,10 @@ def get_google_flow() -> Flow:
             }
         },
         scopes=SCOPES,
+        state=state,
+        code_verifier=code_verifier,
+        autogenerate_code_verifier=autogenerate_code_verifier,
     )
-
 
 def get_user_google_creds(user_id: str) -> Credentials:
     """
