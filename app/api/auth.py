@@ -123,12 +123,12 @@ def callback_google(request: Request) -> Union[RedirectResponse, JSONResponse]:
             )
     try:
         logger.info("Processing Google OAuth callback")
-flow = get_google_flow(
-    state=state,
-    code_verifier=pending["code_verifier"],
-    autogenerate_code_verifier=False,
-)
-flow.redirect_uri = GOOGLE_REDIRECT_URI
+        flow = get_google_flow(
+            state=state,
+            code_verifier=pending["code_verifier"],
+            autogenerate_code_verifier=False,
+        )
+        flow.redirect_uri = GOOGLE_REDIRECT_URI
         logger.debug(f"Using redirect URI: {GOOGLE_REDIRECT_URI}")
 
         # Custom client to allow scope changes during callback
