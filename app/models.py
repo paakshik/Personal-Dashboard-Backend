@@ -48,10 +48,6 @@ class ProjectInDB(ProjectItem):
     created_at: str  # ISO timestamp of creation
     updated_at: str  # ISO timestamp of last update
 
-class ProjectsDashboardResponse(BaseModel):
-    """Response format for the projects dashboard endpoint."""
-    projects: List[ProjectInDB]
-    stats: ProjectStats
 
 class ProjectStats(BaseModel):
     """Statistics aggregated from user's projects."""
@@ -60,6 +56,12 @@ class ProjectStats(BaseModel):
     completed: int
     planning: int
     avgProgress: float
+
+class ProjectsDashboardResponse(BaseModel):
+    """Response format for the projects dashboard endpoint."""
+    projects: List[ProjectInDB]
+    stats: ProjectStats
+
 
 # --- Commands ---
 class CommandItem(BaseModel):
