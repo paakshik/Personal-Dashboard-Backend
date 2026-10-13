@@ -103,24 +103,25 @@ def callback_google(request: Request) -> Union[RedirectResponse, JSONResponse]:
         error = RuntimeError("Google OAuth callback received without authorization code")
         sentry_sdk.capture_exception(error)
         raise HTTPException(status_code=400, detail="Missing authorization code")
-        state = request.query_params.get("state")
 
-        if not state:
-            raise HTTPException(
-                status_code=400,
-                detail="Missing OAuth state"
-            )
+    state = request.query_params.get("state")
 
-        pending = _PENDING_OAUTH.pop(state, None)
+    if not state:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing OAuth state"
+        )
 
-        if (
-            pending is None
-            or time.time() - pending["created_at"] > _OAUTH_TTL_SECONDS
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="OAuth session expired or invalid. Please sign in again."
-            )
+    pending = _PENDING_OAUTH.pop(state, None)
+
+    if (
+        pending is None
+        or time.time() - pending["created_at"] > _OAUTH_TTL_SECONDS
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="OAuth session expired or invalid. Please sign in again."
+        )
     try:
         logger.info("Processing Google OAuth callback")
         flow = get_google_flow(
