@@ -10,7 +10,8 @@ from app.utils.google_services_calender_helper import (classify_events_by_date,
                                                        search_calendar_events as search_helper)
 
 
-router = APIRouter(prefix="/dashboard/calender", tags=["Google Services"])
+router = APIRouter(prefix="/dashboard/calendar", tags=["Google Services"])
+legacy_router = APIRouter(prefix="/dashboard/calender", tags=["Google Services (legacy)"])
 
 time_default = '+00:00'
 
