@@ -13,8 +13,9 @@ import time
 from typing import Any, Dict, Set
 
 from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
+from app.api.todoist_auth import _handle_todoist_callback
 from app.config import TODOIST_CLIENT_SECRET, logger, sentry_sdk
 from app.db_store import get_todoist_credential_by_todoist_user_id
 
@@ -202,3 +203,13 @@ async def todoist_webhook(
         status_code=200,
         content={"status": "ok", "delivery_id": str(delivery_id) if delivery_id else None},
     )
+
+
+@router.get("/callback")
+async def todoist_callback_alias(request: Request):
+    """Callback alias at /integrations/todoist/callback matching the registered redirect URI.
+
+    Delegates to the shared _handle_todoist_callback so the same secure logic
+    serves both /dashboard/todoist/auth/callback and this alias.
+    """
+    return _handle_todoist_callback(request)

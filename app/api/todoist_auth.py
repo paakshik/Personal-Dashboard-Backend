@@ -3,7 +3,7 @@ import hashlib
 import secrets
 import threading
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 from urllib.parse import urlencode
 
 import requests
@@ -50,19 +50,15 @@ def _cleanup_expired_state(now: float) -> None:
             _OAUTH_STATE.pop(state, None)
 
 
-@router.get("/login")
-def login_todoist(current_user: dict = Depends(get_current_user)) -> RedirectResponse:
-    """Start the Todoist OAuth authorization-code flow for the logged-in user.
+def _create_oauth_state(user_id: str) -> Tuple[str, str]:
+    """Generate OAuth state + PKCE code challenge, bind to the internal user_id.
 
-    Requires a valid JWT (get_current_user). Generates a cryptographically secure
-    OAuth state and a PKCE code_verifier/code_challenge, binds them to the
-    current user's id in a thread-safe TTL store, and redirects the browser to
-    Todoist's authorization URL.
+    Stores the code_verifier in the thread-safe TTL store keyed by state so the
+    callback can validate PKCE later. The state is one-time-use and expires after
+    TODOIST_STATE_TTL_SECONDS.
+
+    Returns (state, code_challenge).
     """
-    if not _todoist_configured():
-        raise HTTPException(status_code=503, detail="Todoist OAuth not configured")
-
-    user_id = current_user["id"]
     now = time.time()
     _cleanup_expired_state(now)
 
@@ -81,6 +77,24 @@ def login_todoist(current_user: dict = Depends(get_current_user)) -> RedirectRes
             "created_at": now,
         }
 
+    return state, code_challenge
+
+
+@router.get("/login")
+def login_todoist(current_user: dict = Depends(get_current_user)) -> RedirectResponse:
+    """Start the Todoist OAuth authorization-code flow for the logged-in user.
+
+    Requires a valid JWT (get_current_user). Generates a cryptographically secure
+    OAuth state and a PKCE code_verifier/code_challenge, binds them to the
+    current user's id in a thread-safe TTL store, and redirects the browser to
+    Todoist's authorization URL.
+    """
+    if not _todoist_configured():
+        raise HTTPException(status_code=503, detail="Todoist OAuth not configured")
+
+    user_id = current_user["id"]
+    state, code_challenge = _create_oauth_state(user_id)
+
     params = {
         "client_id": TODOIST_CLIENT_ID,
         "scope": TODOIST_SCOPES,
@@ -93,16 +107,48 @@ def login_todoist(current_user: dict = Depends(get_current_user)) -> RedirectRes
     return RedirectResponse(url=auth_url, status_code=302)
 
 
-@router.get("/callback")
-def callback_todoist(request: Request) -> RedirectResponse:
-    """Handle Todoist's OAuth redirect after the user authorizes the app.
+@router.post("/start")
+def start_todoist_oauth(current_user: dict = Depends(get_current_user)):
+    """Initiate the Todoist OAuth authorization-code flow for the logged-in user.
 
-    Receives ?code= and ?state=. Validates the state (exists, not expired,
-    one-time-use), exchanges the authorization code for tokens via a
-    backend-only POST to Todoist's token endpoint (client secret never
-    leaves the backend), and persists the tokens via
-    db_store.save_todoist_credential for the state-bound user_id.
-    Redirects back to the frontend with ?todoist=connected or ?todoist=error.
+    Requires a valid dashboard JWT. Returns a JSON authorization URL so the
+    frontend can authenticate first (the Axios request interceptor attaches the
+    JWT) and then navigate the browser to Todoist. Never returns the client
+    secret, access token, refresh token, or PKCE verifier.
+    """
+    if not _todoist_configured():
+        raise HTTPException(status_code=503, detail="Todoist OAuth not configured")
+
+    user_id = current_user["id"]
+    state, code_challenge = _create_oauth_state(user_id)
+
+    params = {
+        "client_id": TODOIST_CLIENT_ID,
+        "scope": TODOIST_SCOPES,
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+        "redirect_uri": TODOIST_REDIRECT_URI,
+    }
+    auth_url = f"{TODOIST_AUTH_URL}?{urlencode(params)}"
+    return {
+        "authorization_url": auth_url,
+        "expires_in_seconds": TODOIST_STATE_TTL_SECONDS,
+    }
+
+
+def _handle_todoist_callback(request: Request) -> RedirectResponse:
+    """Shared secure callback logic for Todoist OAuth.
+
+    Validates the OAuth state (exists, not expired, one-time-use), retrieves the
+    state-bound internal user_id, exchanges the authorization code for tokens
+    (including the PKCE code_verifier), and persists the credentials against that
+    user_id. Redirects back to the frontend with ?todoist=connected or
+    ?todoist=error.
+
+    This is reached via Todoist's external redirect, so it does not require a
+    fresh dashboard JWT; authentication relies on the original securely bound,
+    one-time OAuth state.
     """
     if not _todoist_configured():
         raise HTTPException(status_code=503, detail="Todoist OAuth not configured")
@@ -182,6 +228,17 @@ def callback_todoist(request: Request) -> RedirectResponse:
     )
 
     return RedirectResponse(url=f"{FRONTEND_URL}?todoist=connected", status_code=302)
+
+
+@router.get("/callback")
+def callback_todoist(request: Request) -> RedirectResponse:
+    """Handle Todoist's OAuth redirect after the user authorizes the app.
+
+    Delegates to the shared secure callback logic so both the
+    /dashboard/todoist/auth/callback and /integrations/todoist/callback paths
+    invoke identical behavior.
+    """
+    return _handle_todoist_callback(request)
 
 
 @router.get("/connection-status")

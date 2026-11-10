@@ -6,7 +6,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("SECRET_KEY", "local-test-secret-key")
 os.environ.setdefault("ALGORITHM", "HS256")
-os.environ.setdefault("DATABASE_URL", "sqlite:///./test_dashboard.sqlite")
+# Force SQLite for the test suite so tests do not depend on the live
+# PostgreSQL URL loaded from backend/.env via load_dotenv(). Direct
+# assignment (not setdefault) overrides any DATABASE_URL already in env.
+os.environ["DATABASE_URL"] = "sqlite:///./test_dashboard.sqlite"
 os.environ.setdefault("DATA_DIR", str(ROOT / "test_data"))
 os.environ.setdefault("GOOGLE_CLIENT_ID", "")
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "")
