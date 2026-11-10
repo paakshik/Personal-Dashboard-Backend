@@ -63,6 +63,7 @@ def get_gmail_inbox(
                     "subject": subject,
                     "sender": sender_clean,
                     "date": date_str,
+                    "internalDate": email_meta.get('internalDate'),
                     "snippet": email_meta.get('snippet', ''),
                     "labels": email_meta.get('labelIds', [])
                 })
@@ -152,6 +153,7 @@ def search_gmail(
                     "subject": subject,
                     "sender": sender_clean,
                     "date": date_str,
+                    "internalDate": email_meta.get('internalDate'),
                     "snippet": email_meta.get('snippet', ''),
                 })
 
@@ -214,6 +216,7 @@ def get_email_content(
             "subject": subject,
             "sender": sender,
             "date": date_str,
+            "internalDate": message.get('internalDate'),
             "body": get_email_body(message['payload']),
             "snippet": message.get('snippet', '')
         }

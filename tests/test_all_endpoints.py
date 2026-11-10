@@ -32,6 +32,16 @@ def test_protected_endpoint_requires_auth(client):
 
 
 def test_frontend_expected_routes_are_mounted(client):
-    paths = {route.path for route in client.app.routes if hasattr(route, "path")}
+    paths = set(client.get("/openapi.json").json()["paths"])
+    from app.websockets.system_stream import router as system_stream_router
+    websocket_paths = {route.path for route in system_stream_router.routes}
     assert "/health" in paths
-    assert "/docs" in paths
+    assert client.get("/docs").status_code == 200
+    assert "/dashboard/system/processes" in paths
+    assert "/dashboard/system/ports" in paths
+    assert "/dashboard/system/vitals/stream" in websocket_paths
+
+
+def test_system_process_and_port_endpoints(client):
+    assert client.get("/dashboard/system/processes").status_code == 200
+    assert client.get("/dashboard/system/ports").status_code == 200

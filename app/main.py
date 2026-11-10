@@ -12,6 +12,7 @@ from app.api.google_services_gmail import router as gmail_router
 from app.api.google_services_drive import router as drive_router
 from app.api.gemini import router as gemini_upload_router
 from app.websockets.ai_stream import router as ai_stream_router
+from app.websockets.system_stream import router as system_stream_router
 from app.api.projects import router as projects_router
 from app.api.commands import router as commands_router
 from app.api.todoist import router as todoist_router
@@ -28,7 +29,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Nexus Personal Dashboard API", description="Backend API for personal productivity dashboard", version="2.0.0", docs_url="/docs", redoc_url="/redoc", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-    for router in (auth_router, calendar_router, gmail_router, drive_router, projects_router, commands_router, gemini_upload_router, ai_stream_router, todoist_router, sys_monitor_router, sys_analytics_router, sys_ops_router):
+    for router in (auth_router, calendar_router, gmail_router, drive_router, projects_router, commands_router, gemini_upload_router, ai_stream_router, system_stream_router, todoist_router, sys_monitor_router, sys_analytics_router, sys_ops_router):
         app.include_router(router)
 
     @app.get("/health", tags=["System"])
