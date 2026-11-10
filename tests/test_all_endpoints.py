@@ -160,6 +160,73 @@ def test_frontend_expected_routes_are_mounted(client):
     assert "/dashboard/system/vitals/stream" in websocket_paths
 
 
-def test_system_process_and_port_endpoints(client):
-    assert client.get("/dashboard/system/processes").status_code == 200
-    assert client.get("/dashboard/system/ports").status_code == 200
+def test_system_process_and_port_endpoints(client, auth_headers):
+    assert client.get("/dashboard/system/processes", headers=auth_headers).status_code == 200
+    assert client.get("/dashboard/system/ports", headers=auth_headers).status_code == 200
+
+
+def test_ws_ticket_endpoint_issues_ticket_for_owner(client, auth_headers, monkeypatch):
+    _configure_owner_email(monkeypatch, "tester@example.com")
+    response = client.post("/dashboard/system/ws-ticket", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert "ticket" in data
+    assert data["expires_in_seconds"] == 300
+    assert data["single_use"] is True
+
+
+def test_ws_ticket_endpoint_403_for_non_owner(client, auth_headers, monkeypatch):
+    _configure_owner_email(monkeypatch, "someone-else@example.com")
+    response = client.post("/dashboard/system/ws-ticket", headers=auth_headers)
+    assert response.status_code == 403
+
+
+def test_ws_ticket_endpoint_503_when_owner_email_unset(client, auth_headers, monkeypatch):
+    _configure_owner_email(monkeypatch, "")
+    response = client.post("/dashboard/system/ws-ticket", headers=auth_headers)
+    assert response.status_code == 503
+
+
+def test_consume_ws_ticket_valid_ticket_consumed_once():
+    from app.dependencies import create_ws_ticket, consume_ws_ticket
+    ticket_id = create_ws_ticket("test_user_123", "tester@example.com")
+    ticket = consume_ws_ticket(ticket_id)
+    assert ticket is not None
+    assert ticket["user_id"] == "test_user_123"
+    assert ticket["email"] == "tester@example.com"
+    assert ticket["used"] is True
+
+
+def test_consume_ws_ticket_reused_ticket_returns_none():
+    from app.dependencies import create_ws_ticket, consume_ws_ticket
+    ticket_id = create_ws_ticket("test_user_123", "tester@example.com")
+    consume_ws_ticket(ticket_id)
+    ticket = consume_ws_ticket(ticket_id)
+    assert ticket is None
+
+
+def test_consume_ws_ticket_expired_ticket_returns_none(monkeypatch):
+    from app.dependencies import create_ws_ticket, consume_ws_ticket, WS_TICKET_EXPIRY_SECONDS
+    import time
+    import app.dependencies as deps
+
+    ticket_id = create_ws_ticket("test_user_123", "tester@example.com")
+    # Manually expire the ticket by setting expires_at in the past
+    with deps._WS_TICKETS_LOCK:
+        deps._WS_TICKETS[ticket_id]["expires_at"] = time.time() - 1
+
+    ticket = consume_ws_ticket(ticket_id)
+    assert ticket is None
+
+
+def test_consume_ws_ticket_invalid_ticket_returns_none():
+    from app.dependencies import consume_ws_ticket
+    ticket = consume_ws_ticket("nonexistent-ticket-id")
+    assert ticket is None
+
+
+def test_system_endpoints_auth_required_without_headers(client):
+    """Endpoints require auth headers; unauthenticated requests get 401/403."""
+    assert client.get("/dashboard/system/processes").status_code in (401, 403)
+    assert client.get("/dashboard/system/ports").status_code in (401, 403)
+    assert client.post("/dashboard/system/ws-ticket").status_code in (401, 403)

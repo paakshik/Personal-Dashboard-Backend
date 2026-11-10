@@ -4,7 +4,7 @@ import uuid
 import google.genai as genai
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from app.config import DATA_DIR, logger, sentry_sdk
-from app.dependencies import get_current_user
+from app.dependencies import create_ws_ticket, get_current_user, WS_TICKET_EXPIRY_SECONDS
 from app.db_store import list_chat_messages, clear_chat_messages
 from app.utils.gemini_helper import save_chat_message
 from typing import Dict, Any, List
@@ -41,3 +41,20 @@ def get_user_history(current_user: dict = Depends(get_current_user)) -> List[Dic
 def clear_user_history(current_user: dict = Depends(get_current_user)) -> Dict[str, str]:
     count = clear_chat_messages(current_user["id"])
     return {"status": "cleared", "message": f"Cleared {count} messages for user {current_user['email']}"}
+
+
+@router.post("/ws-ticket")
+def get_gemini_ws_ticket(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """
+    Issue a short-lived single-use WebSocket ticket for the Gemini AI stream.
+
+    The ticket is bound to the authenticated user and expires after 5 minutes.
+    It is consumed (invalidated) on the first successful WebSocket connection.
+    No bearer token appears in the WebSocket URL.
+    """
+    ticket_id = create_ws_ticket(current_user["id"], current_user.get("email", ""))
+    return {
+        "ticket": ticket_id,
+        "expires_in_seconds": WS_TICKET_EXPIRY_SECONDS,
+        "single_use": True,
+    }

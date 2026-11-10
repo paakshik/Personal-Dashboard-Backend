@@ -28,7 +28,7 @@ def get_todoist_tasks(current_user: Dict[str, Any] = Depends(get_current_user)):
     except requests.RequestException as exc:
         sentry_sdk.capture_exception(exc)
         logger.error("Todoist fetch failed: %s", exc)
-        return []
+        raise HTTPException(status_code=502, detail="Failed to fetch Todoist tasks") from exc
 
 
 @router.get("/tasks/search", response_model=List[TodoistTaskResponse])

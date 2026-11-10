@@ -81,7 +81,7 @@ def get_gmail_inbox(
     except Exception as e:
         sentry_sdk.capture_exception(e)
         logger.error(f"❌ Critical Gmail Error for user {user_id}: {str(e)}", exc_info=True)
-        return []
+        raise HTTPException(status_code=500, detail="Gmail inbox fetch failed.") from e
 
 @router.get("/gmail/search")
 def search_gmail(

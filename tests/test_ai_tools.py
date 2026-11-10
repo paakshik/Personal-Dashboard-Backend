@@ -4,6 +4,7 @@ from app.utils import ai_tools
 def test_saved_command_tool_never_executes_text(monkeypatch):
     created = {}
     monkeypatch.setattr(ai_tools, "save_command", lambda user_id, payload, command_id=None: created.update(payload) or {"id": "c1", **payload})
+    monkeypatch.setattr(ai_tools, "get_command", lambda user_id, command_id: {"id": "c1", "name": "backup", "command": "echo hello"})
     result = ai_tools.create_command_tool({"id": "u1"}, "backup", "echo hello")
     assert result["ok"] is True
     assert created["command"] == "echo hello"

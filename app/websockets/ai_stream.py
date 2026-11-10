@@ -3,7 +3,7 @@ from typing import Any, Dict
 from fastapi import WebSocket, WebSocketDisconnect, Depends, APIRouter
 from google.genai import types
 from app.config import logger, sentry_sdk, GEMINI_API_KEY
-from app.dependencies import get_current_user_ws
+from app.dependencies import get_current_user_ws_ticket
 from app.utils.gemini_helper import should_enable_search, save_chat_message, gather_user_context, process_ai_attachment
 from app.utils.ai_tools import run_agent_turn
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/dashboard/gemini", tags=["Gemini AI"])
 
 
 @router.websocket("/stream")
-async def websocket_ai_stream(websocket: WebSocket, current_user: Dict[str, Any] = Depends(get_current_user_ws)) -> Any:
+async def websocket_ai_stream(websocket: WebSocket, current_user: Dict[str, Any] = Depends(get_current_user_ws_ticket)) -> Any:
     await websocket.accept()
     user_id = current_user["id"]
     try:

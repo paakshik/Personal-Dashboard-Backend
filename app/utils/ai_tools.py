@@ -65,6 +65,34 @@ def fail(error):
     return {"ok": False, "error": str(error)[:400]}
 
 
+def _verify_persisted(getter, user_id, item_id, expected):
+    """Re-read a DB record and confirm expected fields survived the write.
+
+    Returns (True, None) when the record exists and every expected field
+    matches. Returns (False, message) otherwise so the caller can return
+    fail() instead of ok().
+    """
+    record = getter(user_id, item_id)
+    if record is None:
+        return False, "Record could not be found after saving."
+    for key, value in expected.items():
+        if record.get(key) != value:
+            return False, f"Record field '{key}' did not persist."
+    return True, None
+
+
+def _verify_removed(getter, user_id, item_id):
+    """Re-read a DB record and confirm it no longer exists.
+
+    Returns (True, None) when the record is gone. Returns (False, message)
+    if it still exists after a delete attempt.
+    """
+    record = getter(user_id, item_id)
+    if record is not None:
+        return False, "Record still exists after delete attempt."
+    return True, None
+
+
 def resolve_by_ref(items, ref, name_key="name"):
     ref = str(ref or "").strip()
     if not ref:
@@ -106,6 +134,11 @@ def list_projects_tool(user):
 def create_project_tool(user, name, description="", status="planning", progress=0, priority="medium", category="web", technologies=None):
     item = ProjectItem(name=str(name)[:255], description=description or "", status=status, progress=max(0, min(100, int(progress))), priority=priority, category=category, technologies=technologies or [])
     saved = save_project(user["id"], {**item.model_dump(), "links": {}})
+    if not saved:
+        return fail("Project was not saved.")
+    verified, error = _verify_persisted(get_project, user["id"], saved["id"], {"name": item.name, "status": status})
+    if not verified:
+        return fail(error)
     return ok(project=project_summary(saved))
 
 
@@ -121,11 +154,20 @@ def update_project_tool(user, project, **changes):
     fields = ("name", "description", "status", "progress", "priority", "category", "technologies")
     payload = {key: current.get(key) for key in fields}
     payload["links"] = current.get("links") or {}
+    expected = {}
     for key, value in changes.items():
         if key not in fields:
             return fail(f"Unsupported project field: {key}")
-        payload[key] = max(0, min(100, int(value))) if key == "progress" else value
-    return ok(project=project_summary(save_project(user["id"], payload, current["id"])))
+        normalized = max(0, min(100, int(value))) if key == "progress" else value
+        payload[key] = normalized
+        expected[key] = normalized
+    saved = save_project(user["id"], payload, current["id"])
+    if not saved:
+        return fail("Project was not updated.")
+    verified, error = _verify_persisted(get_project, user["id"], saved["id"], expected)
+    if not verified:
+        return fail(error)
+    return ok(project=project_summary(saved))
 
 
 @register("delete_project", "Delete a project.", {"project": S("Project name or id")}, ("project",), "change", "projects")
@@ -134,7 +176,12 @@ def delete_project_tool(user, project):
     if error:
         return fail(error)
     deleted = db_delete_project(user["id"], current["id"])
-    return ok(deleted=deleted["name"] if deleted else current["name"])
+    if not deleted:
+        return fail("Project not found or could not be deleted.")
+    verified, error = _verify_removed(get_project, user["id"], current["id"])
+    if not verified:
+        return fail(error)
+    return ok(deleted=deleted["name"])
 
 
 @register("list_commands", "List saved commands. This only reads command text; never run it.")
@@ -150,6 +197,11 @@ def create_command_tool(user, name, command, description="", category="general",
     if COMMAND_DANGEROUS.search(command):
         return fail("Saved command contains blocked shell control characters.")
     saved = save_command(user["id"], {"name": str(name)[:100], "command": command, "description": description or "", "category": category or "general", "tags": tags or []})
+    if not saved:
+        return fail("Command was not saved.")
+    verified, error = _verify_persisted(get_command, user["id"], saved["id"], {"name": str(name)[:100], "command": command})
+    if not verified:
+        return fail(error)
     return ok(command={key: saved.get(key) for key in ("id", "name", "description", "category", "tags")})
 
 
@@ -163,10 +215,20 @@ def update_command_tool(user, command_ref, **changes):
         return fail(error)
     fields = ("name", "command", "description", "category", "tags")
     payload = {key: current.get(key) for key in fields}
-    payload.update({key: value for key, value in changes.items() if key in fields})
+    expected = {}
+    for key, value in changes.items():
+        if key not in fields:
+            return fail(f"Unsupported command field: {key}")
+        payload[key] = value
+        expected[key] = value
     if COMMAND_DANGEROUS.search(payload.get("command") or ""):
         return fail("Saved command contains blocked shell control characters.")
     saved = save_command(user["id"], payload, current["id"])
+    if not saved:
+        return fail("Command was not updated.")
+    verified, error = _verify_persisted(get_command, user["id"], saved["id"], expected)
+    if not verified:
+        return fail(error)
     return ok(command={key: saved.get(key) for key in ("id", "name", "description", "category", "tags")})
 
 
@@ -175,7 +237,11 @@ def delete_command_tool(user, command_ref):
     current, error = resolve_by_ref(list_commands(user["id"]), command_ref)
     if error:
         return fail(error)
-    db_delete_command(user["id"], current["id"])
+    if not db_delete_command(user["id"], current["id"]):
+        return fail("Command not found or could not be deleted.")
+    verified, error = _verify_removed(get_command, user["id"], current["id"])
+    if not verified:
+        return fail(error)
     return ok(deleted=current["name"])
 
 
@@ -317,7 +383,7 @@ async def _ask_approval(websocket: WebSocket, call_id: str, name: str, user, arg
         return False
     try:
         while True:
-            message = json.loads(await asyncio.wait_for(websocket.receive_text(), timeout=120))
+            message = json.loads(await asyncio.wait_for(websocket.receive_text(), timeout=CONFIRM_TIMEOUT_SECONDS))
             if message.get("type") == "confirm_response" and message.get("id") == call_id:
                 return bool(message.get("approved"))
     except (asyncio.TimeoutError, WebSocketDisconnect, RuntimeError, ValueError):
@@ -376,7 +442,7 @@ async def run_agent_turn(websocket: WebSocket, model: str, message_parts: List[A
     agent_config = _agent_config(config)
     contents = [types.Content(role="user", parts=[types.Part.from_text(text=part) if isinstance(part, str) else types.Part.from_uri(file_uri=part.uri, mime_type=getattr(part, "mime_type", None) or "application/octet-stream") for part in message_parts])]
     full_text = ""
-    for _ in range(6):
+    for _ in range(MAX_TOOL_ROUNDS):
         stream = await client.aio.models.generate_content_stream(model=model, contents=contents, config=agent_config)
         response_parts, function_calls = [], []
         async for chunk in stream:
@@ -405,6 +471,8 @@ async def run_agent_turn(websocket: WebSocket, model: str, message_parts: List[A
                 result = await asyncio.to_thread(_run_tool, spec, current_user, dict(call.args or {}))
                 if result.get("ok") and spec["mutation"] != "read":
                     await _safe_send(websocket, {"type": "data_changed", "scope": spec["scope"]})
+                elif spec["mutation"] != "read" and not result.get("ok"):
+                    await _safe_send(websocket, {"type": "error", "message": result.get("error", "Tool operation failed.")})
             tool_responses.append(types.Part.from_function_response(name=call.name, response=result))
         contents.append(types.Content(role="user", parts=tool_responses))
     await _safe_send(websocket, {"type": "error", "message": "Stopped after too many tool steps. Try a simpler request."})

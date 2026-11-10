@@ -33,8 +33,12 @@ def create_ws_ticket(user_id: str, email: str) -> str:
     return ticket_id
 
 
-def consume_ws_ticket(ticket_id: str) -> Optional[Dict[str, Any]]:
-    """Validate and consume (invalidate) a WebSocket ticket. Returns ticket data or None."""
+def consume_ws_ticket(ticket_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Validate and consume (invalidate) a WebSocket ticket. Returns ticket data or None.
+
+    If user_id is provided, the ticket's bound user_id must match, otherwise the ticket
+    is rejected (cross-user binding check).
+    """
     with _WS_TICKETS_LOCK:
         ticket = _WS_TICKETS.get(ticket_id)
         if not ticket:
@@ -43,6 +47,8 @@ def consume_ws_ticket(ticket_id: str) -> Optional[Dict[str, Any]]:
             return None
         if time.time() > ticket.get("expires_at", 0):
             _WS_TICKETS.pop(ticket_id, None)
+            return None
+        if user_id is not None and ticket.get("user_id") != user_id:
             return None
         ticket["used"] = True
         return ticket
