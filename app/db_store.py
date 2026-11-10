@@ -1,8 +1,10 @@
+import json
 import uuid
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select, delete
 from app.database import session_scope
-from app.db_models import User, GoogleCredential, Project, Command, ChatMessage, SystemMetric
+from app.db_models import User, GoogleCredential, TodoistCredential, Project, Command, ChatMessage, SystemMetric
+from app.utils.encryption import encrypt, decrypt
 from app.cache import get_json, set_json, delete_pattern
 
 CACHE_TTL = 60
@@ -92,6 +94,111 @@ def revoke_session(user_id):
         if row:
             row.session_active = False
     delete_pattern(f"user:{user_id}:*")
+
+
+def save_todoist_credential(user_id, tokens_dict):
+    """Encrypt and upsert Todoist credentials for a user.
+
+    tokens_dict may contain: access_token, refresh_token, token_uri, client_id,
+    scopes, expires_at, todoist_user_id. Only access_token is required.
+    """
+    access_token = tokens_dict.get("access_token")
+    if not access_token:
+        return False
+    with session_scope() as db:
+        row = db.get(TodoistCredential, str(user_id))
+        encrypted_access = json.dumps(encrypt(access_token))
+        refresh_token = tokens_dict.get("refresh_token")
+        encrypted_refresh = json.dumps(encrypt(refresh_token)) if refresh_token else None
+        if row is None:
+            row = TodoistCredential(
+                user_id=str(user_id),
+                todoist_user_id=tokens_dict.get("todoist_user_id"),
+                encrypted_access_token=encrypted_access,
+                encrypted_refresh_token=encrypted_refresh,
+                token_uri=tokens_dict.get("token_uri", ""),
+                client_id=tokens_dict.get("client_id"),
+                scopes=tokens_dict.get("scopes", []),
+                expires_at=tokens_dict.get("expires_at"),
+            )
+            db.add(row)
+        else:
+            row.todoist_user_id = tokens_dict.get("todoist_user_id", row.todoist_user_id)
+            row.encrypted_access_token = encrypted_access
+            if encrypted_refresh is not None:
+                row.encrypted_refresh_token = encrypted_refresh
+            if tokens_dict.get("token_uri"):
+                row.token_uri = tokens_dict["token_uri"]
+            if tokens_dict.get("client_id") is not None:
+                row.client_id = tokens_dict["client_id"]
+            if tokens_dict.get("scopes") is not None:
+                row.scopes = tokens_dict["scopes"]
+            if tokens_dict.get("expires_at") is not None:
+                row.expires_at = tokens_dict["expires_at"]
+            row.updated_at = datetime.now(timezone.utc)
+        db.flush()
+    delete_pattern(f"user:{user_id}:todoist:*")
+    return True
+
+
+def get_todoist_credential(user_id):
+    """Return decrypted Todoist credential dict for a user.
+
+    Decrypted tokens are for in-memory API use only and must never be returned
+    to the frontend or written to logs.
+    """
+    with session_scope() as db:
+        row = db.get(TodoistCredential, str(user_id))
+        if not row:
+            return None
+        return {
+            "access_token": decrypt(json.loads(row.encrypted_access_token)),
+            "refresh_token": decrypt(json.loads(row.encrypted_refresh_token)) if row.encrypted_refresh_token else None,
+            "token_uri": row.token_uri,
+            "client_id": row.client_id,
+            "scopes": row.scopes or [],
+            "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+            "todoist_user_id": row.todoist_user_id,
+        }
+
+
+def delete_todoist_credential(user_id):
+    """Delete Todoist credentials for a user."""
+    with session_scope() as db:
+        row = db.get(TodoistCredential, str(user_id))
+        if not row:
+            return False
+        db.delete(row)
+    delete_pattern(f"user:{user_id}:todoist:*")
+    return True
+
+
+def get_todoist_credential_by_todoist_user_id(todoist_user_id: str):
+    """Look up a Todoist credential by the external Todoist user ID.
+
+    Used by the webhook endpoint to map an incoming Todoist webhook event to
+    the internal dashboard user. Returns the decrypted credential dict or None.
+    """
+    with session_scope() as db:
+        row = db.scalar(
+            select(TodoistCredential).where(
+                TodoistCredential.todoist_user_id == str(todoist_user_id)
+            )
+        )
+        if not row:
+            return None
+        return {
+            "user_id": row.user_id,
+            "access_token": decrypt(json.loads(row.encrypted_access_token)),
+            "refresh_token": decrypt(json.loads(row.encrypted_refresh_token)) if row.encrypted_refresh_token else None,
+            "token_uri": row.token_uri,
+            "client_id": row.client_id,
+            "scopes": row.scopes or [],
+            "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+            "todoist_user_id": row.todoist_user_id,
+        }
 
 
 def _project_dict(row):

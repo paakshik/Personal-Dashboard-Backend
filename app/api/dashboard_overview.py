@@ -5,9 +5,9 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException
 from googleapiclient.discovery import build
 
-from app.config import TODOIST_TOKEN, logger, sentry_sdk
+from app.config import logger, sentry_sdk
 from app.dependencies import get_current_user
-from app.db_store import list_chat_messages, list_projects
+from app.db_store import get_todoist_credential, list_chat_messages, list_projects
 from app.services.google_auth import get_user_google_creds
 
 
@@ -92,9 +92,14 @@ def get_dashboard_overview(current_user: Dict[str, Any] = Depends(get_current_us
     # ---------- Tasks (Todoist) ----------
     task_count = 0
     recent_tasks: List[Dict[str, Any]] = []
-    if TODOIST_TOKEN:
-        try:
-            resp = requests.get(TODOIST_API_URL, headers={"Authorization": f"Bearer {TODOIST_TOKEN}"}, timeout=15)
+    try:
+        credential = get_todoist_credential(user_id)
+        if credential:
+            resp = requests.get(
+                TODOIST_API_URL,
+                headers={"Authorization": f"Bearer {credential['access_token']}"},
+                timeout=15,
+            )
             resp.raise_for_status()
             data = resp.json()
             if isinstance(data, dict):
@@ -105,9 +110,9 @@ def get_dashboard_overview(current_user: Dict[str, Any] = Depends(get_current_us
                 tasks = []
             task_count = len(tasks)
             recent_tasks = [_summary_task(t) for t in tasks[:RECENT_LIMIT]]
-        except Exception as exc:
-            logger.error("Overview: todoist fetch failed for user %s: %s", user_id, exc)
-            sentry_sdk.capture_exception(exc)
+    except Exception as exc:
+        logger.error("Overview: todoist fetch failed for user %s: %s", user_id, exc)
+        sentry_sdk.capture_exception(exc)
 
     # ---------- Events (Google Calendar) ----------
     event_count = 0

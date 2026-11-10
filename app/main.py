@@ -19,6 +19,8 @@ from app.websockets.system_stream import router as system_stream_router
 from app.api.projects import router as projects_router
 from app.api.commands import router as commands_router
 from app.api.todoist import router as todoist_router
+from app.api.todoist_auth import router as todoist_auth_router
+from app.api.todoist_webhook import router as todoist_webhook_router
 from app.api.dashboard_system_monitoring import router as sys_monitor_router
 from app.api.dashboard_system_analytics import router as sys_analytics_router
 from app.api.dashboard_system_ops import router as sys_ops_router
@@ -33,7 +35,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Nexus Personal Dashboard API", description="Backend API for personal productivity dashboard", version="2.0.0", docs_url="/docs", redoc_url="/redoc", lifespan=lifespan)
     (app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS,
                         allow_origin_regex=r"https://personal-dashboard-frontend-[a-z0-9-]+\.vercel\.app",allow_credentials=True, allow_methods=["*"], allow_headers=["*"]))
-    for router in (auth_router, overview_router, calendar_router, gmail_router, drive_router, projects_router, commands_router, gemini_upload_router, ai_stream_router, system_stream_router, todoist_router, sys_monitor_router, sys_analytics_router, sys_ops_router):
+    for router in (auth_router, overview_router, calendar_router, gmail_router, drive_router, projects_router, commands_router, gemini_upload_router, ai_stream_router, system_stream_router, todoist_router, todoist_auth_router, todoist_webhook_router, sys_monitor_router, sys_analytics_router, sys_ops_router):
         app.include_router(router)
 
     @app.get("/health", tags=["System"])

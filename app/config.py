@@ -60,7 +60,15 @@ GEMINI_API_KEY = optional_env("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 DATA_DIR = Path(os.getenv("DATA_DIR", "dashboard_data"))
 DATA_DIR.mkdir(exist_ok=True, parents=True)
-TODOIST_TOKEN = optional_env("TODOIST_TOKEN")
+
+# Todoist OAuth 2.0 authorization-code flow (per-user connection, replaces shared TODOIST_TOKEN)
+TODOIST_CLIENT_ID = optional_env("TODOIST_CLIENT_ID", "")
+TODOIST_CLIENT_SECRET = optional_env("TODOIST_CLIENT_SECRET", "")
+TODOIST_REDIRECT_URI = optional_env("TODOIST_REDIRECT_URI", "")
+TODOIST_AUTH_URL = optional_env("TODOIST_AUTH_URL", "https://app.todoist.com/oauth/authorize")
+TODOIST_TOKEN_URL = optional_env("TODOIST_TOKEN_URL", "https://api.todoist.com/oauth/access_token")
+TODOIST_SCOPES = optional_env("TODOIST_SCOPES", "task:read task:add task:update task:delete")
+TODOIST_STATE_TTL_SECONDS = int(optional_env("TODOIST_STATE_TTL_SECONDS", 600))
 DASHBOARD_OWNER_EMAIL = optional_env("DASHBOARD_OWNER_EMAIL", "").strip()
 SENTRY_DSN = optional_env("SENTRY_DSN")
 if SENTRY_DSN:

@@ -36,6 +36,19 @@ class GoogleCredential(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class TodoistCredential(Base):
+    __tablename__ = "todoist_credentials"
+    user_id: Mapped[str] = mapped_column(ForeignKey("dashboard_users.id", ondelete="CASCADE"), primary_key=True, index=True)
+    todoist_user_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    encrypted_access_token: Mapped[str] = mapped_column(Text, nullable=False)
+    encrypted_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    token_uri: Mapped[str] = mapped_column(Text)
+    client_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scopes: Mapped[list] = mapped_column(JSON_DOCUMENT, default=list)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class Project(Base):
     __tablename__ = "projects"
     __table_args__ = (CheckConstraint("progress >= 0 AND progress <= 100", name="ck_projects_progress_range"), Index("ix_projects_user_created", "user_id", "created_at"))
