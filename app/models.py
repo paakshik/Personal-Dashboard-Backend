@@ -21,6 +21,8 @@ class TaskItem(BaseModel):
     description: Optional[str] = ""  # Additional notes
     project_id: Optional[str] = None  # Todoist project ID
     labels: Optional[List[str]] = []  # Tags for categorization
+    priority: Optional[int] = None
+    due_string: Optional[str] = None
 
 # --- Projects ---
 class ProjectLink(BaseModel):
