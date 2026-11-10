@@ -2,14 +2,15 @@ from typing import Any,Dict,List
 import psutil
 from datetime import datetime
 import os
-from fastapi import  HTTPException,APIRouter
+from fastapi import HTTPException, APIRouter, Depends
 from app.config import logger,sentry_sdk
+from app.owner_access import require_server_owner
 import tempfile,shutil
 router = APIRouter(prefix="/dashboard/system", tags=["System Monitoring"])
 
 
 @router.get("/processes")
-def get_processes() -> List[Dict[str, Any]]:
+def get_processes(_owner: dict = Depends(require_server_owner)) -> List[Dict[str, Any]]:
     """
     Retrieves a list of the top resource-consuming processes currently running.
 
@@ -58,6 +59,7 @@ def get_processes() -> List[Dict[str, Any]]:
 @router.post("/kill_process/{pid}")
 async def kill_process(
     pid: int,
+    _owner: dict = Depends(require_server_owner),
 ) -> Dict[str, Any]:
     """
     Terminates a specific system process by its Process ID (PID).
@@ -146,7 +148,7 @@ async def kill_process(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/system/cleanup")
-async def system_cleanup() -> Dict[str, Any]:
+async def system_cleanup(_owner: dict = Depends(require_server_owner)) -> Dict[str, Any]:
     """
     Performs destructive system maintenance to free up disk space.
 

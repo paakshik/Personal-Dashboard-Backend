@@ -5,8 +5,10 @@ import psutil
 from datetime import datetime,  timedelta
 import socket
 import platform
-from fastapi import  APIRouter
-from app.config import logger,sentry_sdk
+from fastapi import APIRouter, Depends, HTTPException
+from app.config import logger,sentry_sdk, DASHBOARD_OWNER_EMAIL
+from app.owner_access import require_server_owner, is_server_owner
+from app.dependencies import create_ws_ticket, get_current_user
 
 
 router = APIRouter(prefix="/dashboard/system", tags=["System Monitoring"])
@@ -19,7 +21,7 @@ _last_net_stats = {
 }
 
 @router.get("/current")
-async def get_current_metrics() -> Dict[str, Any]:
+async def get_current_metrics(_owner: dict = Depends(require_server_owner)) -> Dict[str, Any]:
     """
     Retrieves the latest snapshot of system vital metrics.
 
@@ -33,8 +35,38 @@ async def get_current_metrics() -> Dict[str, Any]:
     return await system_data_store.get_vitals()
 
 
+@router.get("/owner-access")
+def get_owner_access(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """
+    Tell the authenticated caller whether they are the dashboard owner.
+
+    Used by the frontend to conditionally render the "Server Information" nav item.
+    Fails closed: returns 503 if DASHBOARD_OWNER_EMAIL is not configured.
+    """
+    if not DASHBOARD_OWNER_EMAIL:
+        raise HTTPException(status_code=503, detail="Server Information is not configured")
+    return {"is_owner": is_server_owner(current_user)}
+
+
+@router.post("/ws-ticket")
+async def get_ws_ticket(_owner: dict = Depends(require_server_owner)) -> Dict[str, Any]:
+    """
+    Issue a short-lived single-use WebSocket ticket for the system vitals stream.
+
+    The ticket is bound to the authenticated owner user and expires after 5 minutes.
+    It is consumed (invalidated) on the first successful WebSocket connection.
+    """
+    owner_user = _owner
+    ticket_id = create_ws_ticket(owner_user["id"], owner_user.get("email", ""))
+    return {
+        "ticket": ticket_id,
+        "expires_in_seconds": 300,
+        "single_use": True,
+    }
+
+
 @router.get("/info")
-def get_system_info() -> Dict[str, str]:
+def get_system_info(_owner: dict = Depends(require_server_owner)) -> Dict[str, str]:
     """
     Retrieves static system metadata and identity information.
 
@@ -81,7 +113,7 @@ def get_system_info() -> Dict[str, str]:
 
 
 @router.get("/ports")
-def get_active_ports() -> List[Dict[str, Any]]:
+def get_active_ports(_owner: dict = Depends(require_server_owner)) -> List[Dict[str, Any]]:
     """
     Retrieves a list of active network ports currently listening for connections.
 
@@ -160,7 +192,7 @@ def get_active_ports() -> List[Dict[str, Any]]:
 
 
 @router.get("/hardware")
-def get_hardware_info() -> Dict[str, Any]:
+def get_hardware_info(_owner: dict = Depends(require_server_owner)) -> Dict[str, Any]:
     """
     Get hardware specifications and health sensors (Temperature/Fans).
 
@@ -239,7 +271,7 @@ def get_hardware_info() -> Dict[str, Any]:
 
 
 @router.get("/network")
-def get_network_info() -> Dict[str, Any]:
+def get_network_info(_owner: dict = Depends(require_server_owner)) -> Dict[str, Any]:
     """
     Retrieves real-time network interface statistics and throughput.
 
