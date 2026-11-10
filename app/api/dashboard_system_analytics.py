@@ -2,8 +2,9 @@ from app.services.system_data_store import system_data_store
 from app.analytics.analyzer import SystemAnalyzer
 from app.analytics.visualizer import create_performance_plot
 from typing import Any,Dict,List, Optional
-from fastapi import  HTTPException,Query,APIRouter
+from fastapi import HTTPException, Query, APIRouter, Depends
 from app.config import logger,sentry_sdk
+from app.owner_access import require_server_owner
 
 
 router = APIRouter(prefix="/dashboard/system", tags=["System Monitoring"])
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/dashboard/system", tags=["System Monitoring"])
 @router.get("/history")
 async def get_historical_metrics(
         hours: int = Query(24, description="Time window to retrieve in hours", ge=1),
+        _owner: dict = Depends(require_server_owner),
         metric: Optional[str] = Query(None,
                                       description="Specific metric path using dot notation (e.g., 'cpu.percent')")
 ) -> List[Dict[str, Any]]:
@@ -81,7 +83,7 @@ async def get_historical_metrics(
 
 
 @router.get("/data-insights")
-async def get_system_insights(hours: int = 24) -> Dict[str, Any]:
+async def get_system_insights(hours: int = 24, _owner: dict = Depends(require_server_owner)) -> Dict[str, Any]:
     """
     Generate valuable insights from historical system data.
 
@@ -127,7 +129,8 @@ async def get_system_insights(hours: int = 24) -> Dict[str, Any]:
 async def get_performance_graph(
         hours: int = 24,
         metrics: str = "cpu.percent,memory.percent,disk.percent",
-        graph_type: str = "line"
+        graph_type: str = "line",
+        _owner: dict = Depends(require_server_owner)
 ) -> Dict[str, Any]:
     """
     Generates a system performance graph for frontend rendering on the dashboard.

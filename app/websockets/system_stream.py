@@ -2,7 +2,7 @@ import asyncio
 from typing import Any, Dict
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from app.config import logger
-from app.dependencies import get_current_user_ws
+from app.owner_access import require_server_owner_ws_ticket
 from app.services.system_data_store import system_data_store
 
 router = APIRouter(tags=["System Monitoring"])
@@ -11,7 +11,7 @@ router = APIRouter(tags=["System Monitoring"])
 @router.websocket("/dashboard/system/vitals/stream")
 async def stream_system_vitals(
     websocket: WebSocket,
-    current_user: Dict[str, Any] = Depends(get_current_user_ws),
+    current_user: Dict[str, Any] = Depends(require_server_owner_ws_ticket),
 ) -> None:
     """Stream backend host vitals to an authenticated dashboard client."""
     await websocket.accept()
