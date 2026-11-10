@@ -300,15 +300,18 @@ def delete_command(user_id, command_id):
     return True
 
 
-def save_chat_message(role, text, user_id, attachment_id=None):
+def save_chat_message(role, text, user_id, attachment_id=None, conversation_id=None):
     data = {"id": str(uuid.uuid4()), "role": role, "text": text, "timestamp": datetime.now(timezone.utc).isoformat()}
     if attachment_id and role == "user":
         data["attachment_id"] = attachment_id
+    if conversation_id is not None:
+        data["conversation_id"] = conversation_id
     with session_scope() as db:
-        db.add(ChatMessage(id=data["id"], user_id=str(user_id), role=role, text=text, attachment_id=data.get("attachment_id")))
+        db.add(ChatMessage(id=data["id"], user_id=str(user_id), conversation_id=conversation_id, role=role, text=text, attachment_id=data.get("attachment_id")))
         old_ids = select(ChatMessage.id).where(ChatMessage.user_id == str(user_id)).order_by(ChatMessage.timestamp.desc()).offset(100)
         db.execute(delete(ChatMessage).where(ChatMessage.user_id == str(user_id), ChatMessage.id.in_(old_ids)))
     delete_pattern(f"user:{user_id}:chat")
+    delete_pattern(f"user:{user_id}:conversations")
     return data
 
 
@@ -319,9 +322,77 @@ def list_chat_messages(user_id):
         return cached
     with session_scope() as db:
         rows = db.scalars(select(ChatMessage).where(ChatMessage.user_id == str(user_id)).order_by(ChatMessage.timestamp.asc()).limit(100))
-        result = [{"id": row.id, "role": row.role, "text": row.text, "timestamp": row.timestamp.isoformat(), **({"attachment_id": row.attachment_id} if row.attachment_id else {})} for row in rows]
+        result = [{"id": row.id, "role": row.role, "text": row.text, "timestamp": row.timestamp.isoformat(), **({"conversation_id": row.conversation_id} if row.conversation_id else {}), **({"attachment_id": row.attachment_id} if row.attachment_id else {})} for row in rows]
     set_json(key, result, CACHE_TTL)
     return result
+
+
+def list_conversations(user_id):
+    """Return user's conversations ordered by most recent activity.
+
+    Each entry: id, title (preview of first user message), message_count,
+    last_timestamp (ISO format).
+    """
+    key = f"user:{user_id}:conversations"
+    cached = get_json(key)
+    if cached is not None:
+        return cached
+    with session_scope() as db:
+        rows = db.scalars(
+            select(ChatMessage)
+            .where(ChatMessage.user_id == str(user_id), ChatMessage.conversation_id.is_not(None))
+            .order_by(ChatMessage.conversation_id.asc(), ChatMessage.timestamp.asc())
+        )
+        grouped = {}
+        for row in rows:
+            cid = row.conversation_id
+            entry = grouped.setdefault(
+                cid,
+                {"id": cid, "message_count": 0, "last_timestamp": None, "title": None, "first_user_text": None},
+            )
+            entry["message_count"] += 1
+            entry["last_timestamp"] = row.timestamp.isoformat()
+            if entry["first_user_text"] is None and row.role == "user":
+                entry["first_user_text"] = row.text
+        result = []
+        for cid, entry in grouped.items():
+            result.append({
+                "id": cid,
+                "title": entry["first_user_text"][:80] if entry["first_user_text"] else "Conversation",
+                "message_count": entry["message_count"],
+                "last_timestamp": entry["last_timestamp"],
+            })
+        result.sort(key=lambda x: x["last_timestamp"] or "", reverse=True)
+    set_json(key, result, CACHE_TTL)
+    return result
+
+
+def get_conversation_messages(user_id, conversation_id):
+    """Return all messages for one conversation, chronological order, user-scoped."""
+    key = f"user:{user_id}:conversation:{conversation_id}"
+    cached = get_json(key)
+    if cached is not None:
+        return cached
+    with session_scope() as db:
+        rows = db.scalars(
+            select(ChatMessage)
+            .where(ChatMessage.user_id == str(user_id), ChatMessage.conversation_id == str(conversation_id))
+            .order_by(ChatMessage.timestamp.asc())
+        )
+        result = [{"id": row.id, "role": row.role, "text": row.text, "timestamp": row.timestamp.isoformat(), "conversation_id": row.conversation_id, **({"attachment_id": row.attachment_id} if row.attachment_id else {})} for row in rows]
+    set_json(key, result, CACHE_TTL)
+    return result
+
+
+def delete_conversation(user_id, conversation_id):
+    """Delete all messages of one conversation belonging to the user. Returns count."""
+    with session_scope() as db:
+        result = db.execute(delete(ChatMessage).where(ChatMessage.user_id == str(user_id), ChatMessage.conversation_id == str(conversation_id)))
+        count = result.rowcount or 0
+    delete_pattern(f"user:{user_id}:chat")
+    delete_pattern(f"user:{user_id}:conversations")
+    delete_pattern(f"user:{user_id}:conversation:{conversation_id}")
+    return count
 
 
 def clear_chat_messages(user_id):
@@ -329,6 +400,7 @@ def clear_chat_messages(user_id):
         result = db.execute(delete(ChatMessage).where(ChatMessage.user_id == str(user_id)))
         count = result.rowcount or 0
     delete_pattern(f"user:{user_id}:chat")
+    delete_pattern(f"user:{user_id}:conversations")
     return count
 
 

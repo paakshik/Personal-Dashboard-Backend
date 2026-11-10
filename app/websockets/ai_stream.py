@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict
 from fastapi import WebSocket, WebSocketDisconnect, Depends, APIRouter
@@ -19,6 +20,9 @@ async def websocket_ai_stream(websocket: WebSocket, current_user: Dict[str, Any]
             data = await websocket.receive_json()
             prompt = str(data.get("prompt", "")).strip()
             attachment_id = data.get("attachment_id")
+            conversation_id = data.get("conversation_id")
+            if not conversation_id:
+                conversation_id = str(uuid.uuid4())
             if not prompt and not attachment_id:
                 await websocket.send_json({"type": "error", "message": "A prompt or attachment is required"})
                 continue
@@ -36,10 +40,10 @@ async def websocket_ai_stream(websocket: WebSocket, current_user: Dict[str, Any]
             search_tools = [types.Tool(google_search=types.GoogleSearch())] if should_enable_search(prompt) else []
             config = types.GenerateContentConfig(system_instruction=instruction, tools=search_tools)
             await websocket.send_json({"type": "start"})
-            save_chat_message("user", prompt or "Analyze the attached file.", user_id, attachment_id)
+            save_chat_message("user", prompt or "Analyze the attached file.", user_id, attachment_id, conversation_id)
             response = await run_agent_turn(websocket, "gemini-2.5-flash", parts, config, current_user)
             if response:
-                save_chat_message("assistant", response, user_id)
+                save_chat_message("assistant", response, user_id, conversation_id=conversation_id)
             await websocket.send_json({"type": "done"})
     except WebSocketDisconnect:
         logger.info("AI WebSocket disconnected for user %s", user_id)

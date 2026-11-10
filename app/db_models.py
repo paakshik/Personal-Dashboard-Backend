@@ -81,9 +81,10 @@ class Command(Base):
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
-    __table_args__ = (CheckConstraint("role IN ('user', 'assistant', 'system')", name="ck_chat_role"), Index("ix_chat_user_timestamp", "user_id", "timestamp"))
+    __table_args__ = (CheckConstraint("role IN ('user', 'assistant', 'system')", name="ck_chat_role"), Index("ix_chat_user_timestamp", "user_id", "timestamp"), Index("ix_chat_user_conversation", "user_id", "conversation_id"))
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("dashboard_users.id", ondelete="CASCADE"), index=True)
+    conversation_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     role: Mapped[str] = mapped_column(String(32))
     text: Mapped[str] = mapped_column(Text)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

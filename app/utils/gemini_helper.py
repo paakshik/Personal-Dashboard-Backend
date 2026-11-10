@@ -215,3 +215,27 @@ async def stream_gemini_response(websocket: WebSocket, model: Any, message_parts
         sentry_sdk.capture_exception(exc)
         await _safe_send(websocket, {"type": "error", "message": error_message})
         return full_response
+
+
+async def generate_gemini_response(model: str, message_parts: List[Any], config: Any) -> str:
+    """Non-streaming Gemini call used by the briefing endpoint.
+
+    Returns the full response text on success, or an empty string on any
+    failure (the error is logged and reported to Sentry). Never raises, so a
+    temporary Gemini failure cannot crash the Home page.
+    """
+    if not GEMINI_API_KEY:
+        logger.error("Gemini is not configured on the backend. Add GEMINI_API_KEY to the Render backend environment and redeploy.")
+        return ""
+    try:
+        client = create_gemini_client()
+        response = await client.aio.models.generate_content(model=model, contents=message_parts, config=config)
+        text = getattr(response, "text", "") or ""
+        if not text.strip():
+            logger.error("Gemini returned an empty response for non-streaming call.")
+        return text
+    except Exception as exc:
+        error_message = describe_gemini_error(exc)
+        logger.error("Gemini non-streaming response failed (%s): %s", type(exc).__name__, exc, exc_info=True)
+        sentry_sdk.capture_exception(exc)
+        return ""

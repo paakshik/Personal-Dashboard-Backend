@@ -50,3 +50,12 @@ def session_scope():
 def init_db() -> None:
     from app import db_models  # noqa: F401
     Base.metadata.create_all(bind=engine)
+    # Migration-safe: add conversation_id to chat_messages if the table already
+    # existed without it (no Alembic in this project). Existing rows get NULL.
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    if "chat_messages" in inspector.get_table_names():
+        columns = {col["name"] for col in inspector.get_columns("chat_messages")}
+        if "conversation_id" not in columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE chat_messages ADD COLUMN conversation_id VARCHAR(64)"))
