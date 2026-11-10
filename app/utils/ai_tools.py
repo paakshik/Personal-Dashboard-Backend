@@ -348,9 +348,27 @@ def declarations():
     return [types.Tool(function_declarations=registry)]
 
 
+
 def _agent_config(config):
-    instruction = (getattr(config, "system_instruction", "") or "") + "\n\n" + AGENT_RULES
-    return types.GenerateContentConfig(system_instruction=instruction, tools=declarations(), automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True))
+    # Preserve the original Gemini system instruction.
+    base_instruction = (
+        getattr(config, "system_instruction", "") or ""
+    )
+
+    # Append the rules already defined in this module.
+    instruction = f"{base_instruction}\n\n{RULES}"
+
+    # Preserve existing tools, including Google Search when enabled.
+    existing_tools = list(getattr(config, "tools", None) or [])
+    existing_tools.extend(declarations())
+
+    return types.GenerateContentConfig(
+        system_instruction=instruction,
+        tools=existing_tools,
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(
+            disable=True
+        )
+    )
 
 
 async def run_agent_turn(websocket: WebSocket, model: str, message_parts: List[Any], config: Any, current_user: Dict[str, Any]) -> str:

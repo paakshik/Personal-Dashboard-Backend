@@ -61,6 +61,7 @@ client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 DATA_DIR = Path(os.getenv("DATA_DIR", "dashboard_data"))
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 TODOIST_TOKEN = optional_env("TODOIST_TOKEN")
+DASHBOARD_OWNER_EMAIL = optional_env("DASHBOARD_OWNER_EMAIL", "").strip()
 SENTRY_DSN = optional_env("SENTRY_DSN")
 if SENTRY_DSN:
     sentry_sdk.init(dsn=SENTRY_DSN, environment=optional_env("ENVIRONMENT", "production"), traces_sample_rate=0.1, send_default_pii=False)
