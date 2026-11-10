@@ -41,8 +41,11 @@ GOOGLE_CLIENT_ID = optional_env("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = optional_env("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = optional_env("GOOGLE_REDIRECT_URI", "")
 REDIS_URL = optional_env("REDIS_URL")
-ALLOWED_ORIGINS = [origin.strip().rstrip("/") for origin in optional_env("ALLOWED_ORIGINS", f"{FRONTEND_URL},http://localhost:5173").split(",") if origin.strip()]
-
+ALLOWED_ORIGINS = [
+    o.strip().rstrip("/")
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+    if o.strip()
+]
 SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/gmail.modify",
