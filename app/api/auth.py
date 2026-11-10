@@ -5,18 +5,21 @@ from datetime import datetime, timedelta ,timezone
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from googleapiclient.discovery import build
-from typing import Dict, Any , Union  ,List
-from app.config import (
-    GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI, USERS_FILE, TOKENS_FILE,
-    SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, FRONTEND_URL,logger,sentry_sdk
-)
-from app.utils.file_ops import read_json_file, write_json_file
+import time
+from typing import Dict, Any, Union
+from app.config import (GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, FRONTEND_URL, logger, sentry_sdk)
+from app.db_store import save_user_and_credentials, revoke_session, find_user_by_google_id
 from app.services.google_auth import get_google_flow
 from app.dependencies import get_current_user
+
+_PENDING_OAUTH: Dict[str, Dict[str, Any]] = {}
+_OAUTH_TTL_SECONDS = 600
+
 # Router for all authentication endpoints
 router = APIRouter(prefix="/dashboard/auth/google", tags=["Authentication"])
 
 # it  initiates the Google login process (asks for permission)
+
 @router.get("/login")
 def login_google() -> Dict[str, str]:
     """
@@ -29,19 +32,41 @@ def login_google() -> Dict[str, str]:
     Raises:
         HTTPException: If there's an error creating the authorization URL
     """
+
     try:
-        flow = get_google_flow()
+        now = time.time()
+
+        # Remove expired login attempts
+        for old_state, entry in list(_PENDING_OAUTH.items()):
+            if now - entry["created_at"] > _OAUTH_TTL_SECONDS:
+                _PENDING_OAUTH.pop(old_state, None)
+
+        flow = get_google_flow(
+            autogenerate_code_verifier=True
+        )
         flow.redirect_uri = GOOGLE_REDIRECT_URI
-        auth_url, _ = flow.authorization_url(
+
+        auth_url, state = flow.authorization_url(
             access_type="offline",
             include_granted_scopes="true",
-            prompt="consent"
+            prompt="consent",
         )
+
+        if not flow.code_verifier:
+            raise RuntimeError("OAuth code verifier was not generated")
+
+        # Preserve the verifier for the callback, indexed by OAuth state
+        _PENDING_OAUTH[state] = {
+            "code_verifier": flow.code_verifier,
+            "created_at": now,
+        }
+
         return {"auth_url": auth_url}
+
     except Exception as e:
-        logger.error(str(e))
+        logger.exception("Google login setup failed")
         sentry_sdk.capture_exception(e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Could not start Google login")
 
 @router.get("/callback", response_model=None)
 def callback_google(request: Request) -> Union[RedirectResponse, JSONResponse]:
@@ -75,11 +100,33 @@ def callback_google(request: Request) -> Union[RedirectResponse, JSONResponse]:
         error = RuntimeError("Google OAuth callback received without authorization code")
         sentry_sdk.capture_exception(error)
         raise HTTPException(status_code=400, detail="Missing authorization code")
+
+    state = request.query_params.get("state")
+
+    if not state:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing OAuth state"
+        )
+
+    pending = _PENDING_OAUTH.pop(state, None)
+
+    if (
+        pending is None
+        or time.time() - pending["created_at"] > _OAUTH_TTL_SECONDS
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="OAuth session expired or invalid. Please sign in again."
+        )
     try:
         logger.info("Processing Google OAuth callback")
-        flow = get_google_flow()
+        flow = get_google_flow(
+            state=state,
+            code_verifier=pending["code_verifier"],
+            autogenerate_code_verifier=False,
+        )
         flow.redirect_uri = GOOGLE_REDIRECT_URI
-
         logger.debug(f"Using redirect URI: {GOOGLE_REDIRECT_URI}")
 
         # Custom client to allow scope changes during callback
@@ -104,43 +151,22 @@ def callback_google(request: Request) -> Union[RedirectResponse, JSONResponse]:
         logger.info(f"Google user authenticated: {email} (ID: {google_id})")
 
         # Find or Create User in database
-        users:List[Dict[str, Any]] = read_json_file(USERS_FILE)
-        user = next((u for u in users if u.get("google_id") == google_id), None)
-
-        if not user:
-            # Create new user
-            user_id = str(uuid.uuid4())
-            user = {
-                "id": user_id,
-                "google_id": google_id,
-                "email": email,
-                "name": user_info.get("name", "User"),
-                "picture": user_info.get("picture", ""),
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }
-            users.append(user)
-            write_json_file(USERS_FILE, users)
-            logger.info(f"Created new user: {email} with ID: {user_id}")
-        else:
-            # Existing user
-            # understand why this gives error
-            user_id = user["id"]
-            logger.info(f"Existing user logged in: {email}.")
-
-        # Store Google tokens for API access
-        all_tokens = read_json_file(TOKENS_FILE)
-        existing_refresh = all_tokens.get(user_id, {}).get("refresh_token")
-
-        all_tokens[user_id] = {
-            "access_token": creds.token,
-            "refresh_token": creds.refresh_token if creds.refresh_token else existing_refresh,
-            "token_uri": creds.token_uri,
-            "client_id": creds.client_id,
-            "client_secret": creds.client_secret,
-            "scopes": creds.scopes
+        existing_user = find_user_by_google_id(google_id)
+        user_data = {
+            "id": existing_user["id"] if existing_user else str(uuid.uuid4()),
+            "google_id": google_id, "email": email,
+            "name": user_info.get("name", "User"), "picture": user_info.get("picture", ""),
+            "created_at": datetime.now(timezone.utc),
         }
-        write_json_file(TOKENS_FILE, all_tokens)
-        logger.debug(f"Stored Google tokens for user: {user_id}")
+        user, stored = save_user_and_credentials(user_data, {
+            "access_token": creds.token, "refresh_token": creds.refresh_token,
+            "token_uri": creds.token_uri, "client_id": creds.client_id,
+            "client_secret": creds.client_secret, "scopes": creds.scopes or [],
+        })
+        user_id = user["id"]
+        if not creds.refresh_token and stored.get("refresh_token"):
+            from app.db_store import save_credential
+            save_credential(user_id, {"refresh_token": stored["refresh_token"]})
 
         # Generate JWT for Frontend authentication
         expiration = datetime.now(timezone.utc) + timedelta(
@@ -211,9 +237,5 @@ def logout(
     Raises:
         HTTPException: 401 if token is invalid/expired
     """
-    user_id = current_user["id"]
-    all_tokens = read_json_file(TOKENS_FILE)
-    if user_id in all_tokens:
-        del all_tokens[user_id]
-        write_json_file(TOKENS_FILE, all_tokens)
+    revoke_session(current_user["id"])
     return {"message": "Logged out successfully"}

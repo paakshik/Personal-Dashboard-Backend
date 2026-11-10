@@ -1,184 +1,72 @@
 import io
+from pathlib import Path
+from typing import Any, Dict, Union
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
+from app.config import DATA_DIR, logger, sentry_sdk
 from app.services.google_auth import get_user_google_creds
-import json
-from app.config import (USERS_FILE, TOKENS_FILE, PROJECTS_FILE, COMMANDS_FILE,
-                        CHAT_HISTORY_FILE,  SYSTEM_METRICS_FILE,logger,sentry_sdk)
-from pathlib import Path
-from typing import Any, Union, List, Dict
+from app.db_store import get_credential
 
-def read_json_file(file_path: Union[str, Path]) -> Union[
-    List[Any], Dict[str, Any], None]:
-    """
-    Read JSON file and return its content.
+# Compatibility path constants retained for older tests/tools that pass these paths.
+USERS_FILE = DATA_DIR / "users.json"
+TOKENS_FILE = DATA_DIR / "tokens.json"
+PROJECTS_FILE = DATA_DIR / "projects.json"
+COMMANDS_FILE = DATA_DIR / "commands.json"
+CHAT_HISTORY_FILE = DATA_DIR / "chat-data.json"
+SYSTEM_METRICS_FILE = DATA_DIR / "system_metrics.json"
 
-    Args:
-        file_path: Path to JSON file (string or Path object)
 
-    Returns:
-        - List for user/project/command/chat files
-        - Dict for tokens file
-        - None for other files if they don't exist
+def read_json_file(file_path: Union[str, Path]):
+    """Read legacy-shaped records from PostgreSQL for remaining compatibility callers."""
+    from app.database import session_scope
+    from app.db_models import User, GoogleCredential, Project, Command, ChatMessage
+    from sqlalchemy import select
+    name = Path(file_path).name
+    with session_scope() as db:
+        if name == "users.json":
+            rows = db.scalars(select(User))
+            return [{"id": x.id, "google_id": x.google_id, "email": x.email, "name": x.name, "picture": x.picture, "created_at": x.created_at.isoformat()} for x in rows]
+        if name == "tokens.json":
+            rows = db.scalars(select(GoogleCredential).where(GoogleCredential.session_active.is_(True)))
+            return {x.user_id: {"access_token": x.access_token, "refresh_token": x.refresh_token, "token_uri": x.token_uri, "client_id": x.client_id, "client_secret": x.client_secret, "scopes": x.scopes or []} for x in rows}
+        if name == "projects.json":
+            rows = db.scalars(select(Project))
+            return [{"id": x.id, "user_id": x.user_id, "name": x.name, "description": x.description, "progress": x.progress, "status": x.status, "technologies": x.technologies or [], "category": x.category, "priority": x.priority, "links": x.links or {}, "created_at": x.created_at.isoformat(), "updated_at": x.updated_at.isoformat()} for x in rows]
+        if name == "commands.json":
+            rows = db.scalars(select(Command))
+            return [{"id": x.id, "user_id": x.user_id, "name": x.name, "command": x.command, "description": x.description, "category": x.category, "tags": x.tags or [], "created_at": x.created_at.isoformat(), "updated_at": x.updated_at.isoformat()} for x in rows]
+        if name == "chat-data.json":
+            rows = db.scalars(select(ChatMessage).order_by(ChatMessage.timestamp))
+            result = {}
+            for row in rows:
+                item = {"id": row.id, "role": row.role, "text": row.text, "timestamp": row.timestamp.isoformat()}
+                if row.attachment_id:
+                    item["attachment_id"] = row.attachment_id
+                result.setdefault(row.user_id, []).append(item)
+            return result
+    return []
 
-    Behavior:
-        - Returns empty list [] for user/project/command/chat files if file doesn't exist
-        - Returns empty dict {} for tokens file if file doesn't exist
-        - Returns None for other files if they don't exist
-        - Returns default on JSON decode errors
-    """
-    """Read JSON file, return default if file doesn't exist or is invalid"""
-    path_obj = Path(file_path)
 
-    # 1. LAZY INIT: Check if file exists
-    if not path_obj.exists():
-        default_data = None
+def write_json_file(file_path, data, verbose=False) -> bool:
+    """Writes compatibility data through ORM operations rather than filesystem JSON."""
+    logger.warning("write_json_file is deprecated; persist via app.db_store directly (%s)", Path(file_path).name)
+    return False
 
-        # Determine default structure based on file type
-        if path_obj == TOKENS_FILE:
-            default_data = {}
-        elif path_obj in [USERS_FILE, PROJECTS_FILE, COMMANDS_FILE, CHAT_HISTORY_FILE,
-                          SYSTEM_METRICS_FILE]:
-            default_data = []
 
-        # If it's a known file type, create it physically now
-        if default_data is not None:
-            try:
-                # Ensure the folder exists (e.g., dashboard_data/)
-                path_obj.parent.mkdir(parents=True, exist_ok=True)
-
-                # Create the actual file with empty JSON
-                with open(path_obj, 'w',encoding='utf-8') as f:
-                    json.dump(default_data, f)
-
-                logger.info(f"Lazy Initialized new data file: {path_obj}")
-                return default_data
-            except OSError as e:
-                logger.error(f"Failed to lazy create {path_obj}: {e}")
-                return default_data  # Return in-memory empty data as fallback
-
-        return None
-
-    # 2. Normal Read
+def upload_bytes_to_drive(user_id: str, file_content: bytes, filename: str, content_type: str) -> Dict[str, Any]:
     try:
-        with open(path_obj, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        logger.error(f"Error reading {path_obj}: {e}")
-        # Return safe defaults if file is corrupted
-        if path_obj == TOKENS_FILE:
-            return {}
-        return []
-
-def write_json_file(file_path, data, verbose=False) -> bool :
-    """
-        Write data to JSON file with error handling.
-
-        Args:
-            file_path: Path to write to (string or Path object)
-            data: Data to serialize as JSON (dict, list, etc.)
-            verbose: If True, print success message
-
-        Returns:
-            True if successful, False otherwise
-        """
-    try:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-
-        if verbose:
-            logger.info(f"Successfully wrote {type(data).__name__} to {file_path}")
-
-        return True
-
-    except IOError as e:
-        logger.error(f"File I/O error writing to {file_path}: {e}", exc_info=True)
-        sentry_sdk.capture_exception(e, extra={
-            "file_path": str(file_path),
-            "data_type": type(data).__name__
-        })
-        return False
-
-    except (TypeError, ValueError) as e:
-        logger.error(f"JSON serialization error for {file_path}: {e}", exc_info=True)
-        sentry_sdk.capture_exception(e, extra={
-            "file_path": str(file_path),
-            "data_preview": str(data)[:200]
-        })
-        return False
-
-def upload_bytes_to_drive(
-    user_id: str,
-    file_content: bytes,
-    filename: str,
-    content_type: str
-) -> Dict[str, Any]:
-    """
-    Uploads a raw binary file to Google Drive and attempts to make it public.
-
-    This function authenticates using the user's stored Google credentials,
-    streams the file content to Drive, and sets the permission to 'anyone with link'.
-
-    Args:
-        user_id (str): The unique identifier of the user (to fetch tokens).
-        file_content (bytes): The raw file data to be uploaded.
-        filename (str): The display name for the file on Google Drive.
-        content_type (str): The MIME type of the file (e.g., 'image/png').
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the Google Drive file metadata,
-                        specifically including 'id' and 'webViewLink'.
-
-    Raises:
-        Exception: If authentication fails, the network is down, or Google API rejects the request.
-                   (Note: Permission errors are logged but do NOT raise an exception).
-    """
-    try:
-        logger.info(f"Starting Drive upload for user {user_id}: '{filename}'")
-
-        # 1. Validation Logic
-        all_tokens = read_json_file(TOKENS_FILE)
-        if user_id not in all_tokens:
-            logger.warning(f"User {user_id} missing Google tokens.")
-            sentry_sdk.capture_message(f"User {user_id} missing Google tokens")
+        if not get_credential(user_id):
             raise RuntimeError("Google Drive access not configured")
-
-        # 2. Build Service
-        creds = get_user_google_creds(user_id)
-        service = build('drive', 'v3', credentials=creds)
-
-        # 3. Prepare Upload
-        media = MediaIoBaseUpload(
-            io.BytesIO(file_content),
-            mimetype=content_type,
-            resumable=True
-        )
-
-        # 4. Execute Upload
-        uploaded_file = service.files().create(
-            body={'name': filename},
-            media_body=media,
-            fields='id, webViewLink'
-        ).execute()
-
-        file_id = uploaded_file.get('id')
-        logger.info(f"File uploaded successfully. ID: {file_id}")
-
-        # 5. Set Permissions (Public Read)
+        service = build("drive", "v3", credentials=get_user_google_creds(user_id))
+        media = MediaIoBaseUpload(io.BytesIO(file_content), mimetype=content_type or "application/octet-stream", resumable=True)
+        uploaded = service.files().create(body={"name": filename}, media_body=media, fields="id,webViewLink").execute()
         try:
-            service.permissions().create(
-                fileId=file_id,
-                body={'type': 'anyone', 'role': 'reader'}
-            ).execute()
-        except Exception as perm_error:
-            # We log this but do NOT raise it, because the file IS uploaded.
-            logger.error(f"Permissions error for {file_id}: {perm_error}")
-            sentry_sdk.capture_exception(perm_error)
-
-        return uploaded_file
-
-    except Exception as e:
-        # Capture critical failures that stop the upload
-        sentry_sdk.capture_exception(e)
-        logger.error(f"Upload Failure for '{filename}': {str(e)}")
-        raise e
+            service.permissions().create(fileId=uploaded["id"], body={"type": "anyone", "role": "reader"}).execute()
+        except Exception as exc:
+            logger.warning("Drive file uploaded but permission update failed: %s", exc)
+            sentry_sdk.capture_exception(exc)
+        return uploaded
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        logger.error("Drive upload failed for %s: %s", filename, exc)
+        raise

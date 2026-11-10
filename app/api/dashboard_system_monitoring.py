@@ -33,7 +33,7 @@ async def get_current_metrics() -> Dict[str, Any]:
     return await system_data_store.get_vitals()
 
 
-@router.get("info")
+@router.get("/info")
 def get_system_info() -> Dict[str, str]:
     """
     Retrieves static system metadata and identity information.
@@ -80,7 +80,7 @@ def get_system_info() -> Dict[str, str]:
         }
 
 
-@router.get("ports")
+@router.get("/ports")
 def get_active_ports() -> List[Dict[str, Any]]:
     """
     Retrieves a list of active network ports currently listening for connections.
@@ -159,7 +159,7 @@ def get_active_ports() -> List[Dict[str, Any]]:
         return []
 
 
-@router.get("hardware")
+@router.get("/hardware")
 def get_hardware_info() -> Dict[str, Any]:
     """
     Get hardware specifications and health sensors (Temperature/Fans).
@@ -238,7 +238,7 @@ def get_hardware_info() -> Dict[str, Any]:
         }
 
 
-@router.get("network")
+@router.get("/network")
 def get_network_info() -> Dict[str, Any]:
     """
     Retrieves real-time network interface statistics and throughput.

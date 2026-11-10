@@ -1,472 +1,78 @@
-import uuid
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
-from app.dependencies import get_current_user
-from app.utils.file_ops import read_json_file, write_json_file, COMMANDS_FILE
-from app.models import CommandItem, CommandInDB
-from typing import Dict,Any,Optional,List
-from app.config import logger,sentry_sdk
+from typing import Any, Dict, List, Optional
 import re
 import subprocess
+import shlex
+from fastapi import APIRouter, Depends, HTTPException
+from app.dependencies import get_current_user
+from app.db_store import list_commands, get_command as db_get_command, save_command, delete_command as db_delete_command
+from app.models import CommandItem, CommandInDB
+from app.config import logger, sentry_sdk
 
 router = APIRouter(prefix="/dashboard/commands", tags=["Commands"])
-
-
 DANGEROUS_CHARS_PATTERN = re.compile(r'[;&|`$]')
 
+
 @router.get("", response_model=List[CommandInDB])
-def get_all_commands(current_user: Dict[str, Any] = Depends(get_current_user)) -> List[
-    CommandInDB]:
-    """
-    Retrieves the list of available voice commands configuration.
+def get_all_commands(current_user: Dict[str, Any] = Depends(get_current_user)):
+    return list_commands(current_user["id"])
 
-    Reads from the local JSON storage to provide the frontend with the list
-    of active voice triggers. Requires an authenticated user session.
-
-    Args:
-        current_user (Dict[str, Any]): The authenticated user context provided
-                                       by the dependency injector.
-
-    Returns:
-        List[CommandInDB]: A list of command objects validated against the schema.
-
-    Raises:
-        HTTPException (500): If the JSON file is missing, corrupt, or unreadable.
-    """
-    user_id = current_user.get("id", "unknown")
-    try:
-        # Attempt to read the file
-        commands_data = read_json_file(COMMANDS_FILE)
-        user_commands = [
-            cmd for cmd in commands_data
-            if cmd.get("user_id") == user_id
-        ]
-
-
-        logger.debug(
-            f"Successfully loaded {len(user_commands)} commands for User {user_id}.")
-        return user_commands
-    except FileNotFoundError:
-        error_msg = f"Commands file not found at: {COMMANDS_FILE}"
-        logger.error(error_msg)
-        sentry_sdk.capture_message(error_msg, level="warning")
-        return []
-
-    except Exception as e:
-        logger.error(f"Critical error loading commands: {str(e)}")
-        sentry_sdk.capture_exception(e)
-        raise HTTPException(
-            status_code=500,
-            detail="System was unable to load command configuration."
-        )
 
 @router.post("", response_model=CommandInDB, status_code=201)
-def create_command(
-        cmd: CommandItem,
-        current_user: Dict[str, Any] = Depends(get_current_user)
-) -> CommandInDB:
-    """
-    Creates a new  command configuration for the authenticated user.
+def create_command(cmd: CommandItem, current_user: Dict[str, Any] = Depends(get_current_user)):
+    return save_command(current_user["id"], cmd.model_dump())
 
-    Accepts a command definition, generates a unique ID and timestamps,
-    and persists it to the local JSON storage.
 
-    Args:
-        cmd (CommandItem): The payload containing the command trigger and action.
-        current_user (Dict[str, Any]): The authenticated user context.
-
-    Returns:
-        Dict[str, Any]: The fully created command object including ID and timestamps.
-
-    Raises:
-        HTTPException (500): If the file write operation fails.
-    """
-    try:
-        user_id = current_user.get("id", "unknown")
-
-        # Load existing commands
-        try:
-            commands = read_json_file(COMMANDS_FILE)
-            if not isinstance(commands, list):
-                commands = []
-        except FileNotFoundError:
-            commands = []
-
-        cmd_id = str(uuid.uuid4())
-        now_iso = datetime.now().isoformat()
-
-        # 1. Create the Object (for the Response)
-        new_cmd = CommandInDB(
-            user_id=user_id,
-            id=cmd_id,
-            created_at=now_iso,
-            updated_at=now_iso,
-            **cmd.model_dump()
-        )
-
-        # 2. Convert to Dictionary (CRITICAL)
-        new_cmd_dict = new_cmd.model_dump()
-
-        # 3. Save to File
-        commands.append(new_cmd_dict)
-        # ❌ DELETED: commands.append(new_cmd)  <-- This was causing the crash!
-
-        write_json_file(COMMANDS_FILE, commands)
-
-        logger.info(f"✅ Command created: {cmd.name} (ID: {cmd_id})")
-        return new_cmd
-
-    except Exception as e:
-        logger.error(f"Failed to save command '{cmd.name}': {e}")
-        sentry_sdk.capture_exception(e)
-        raise HTTPException(
-            status_code=500,
-            detail="Could not save the new command. Please try again."
-        )
-
-@router.delete("/{command_id}", response_model=Dict[str, str])
-def delete_command(
-    command_id: str,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Dict[str, str]:
-    """
-    Permanently deletes a specific command configuration.
-
-    Locates the command by ID and removes it from the JSON storage.
-    If the command ID does not exist, a 404 error is returned.
-
-    Args:
-        command_id (str): The unique UUID of the command to delete.
-        current_user (Dict[str, Any]): The authenticated user context.
-
-    Returns:
-        Dict[str, str]: A confirmation message upon successful deletion.
-
-    Raises:
-        HTTPException (404): If no command matches the provided ID.
-        HTTPException (500): If the file write operation fails.
-    """
-    user_id = current_user.get("id")
-
-    try:
-        commands = read_json_file(COMMANDS_FILE)
-
-        command_to_delete = next(
-            (c for c in commands if
-             c.get("id") == command_id and c.get("user_id") == user_id),
-            None
-        )
-
-        if not command_to_delete:
-            logger.warning(
-                f"Delete failed: Command {command_id} not found or unauthorized for User {user_id}.")
-            # Return 404 to hide whether the command exists or not (Security Best Practice)
-            raise HTTPException(
-                status_code=404,
-                detail="Command not found."
-            )
-
-        new_commands = [c for c in commands if c.get("id") != command_id]
-
-        # 3. Save Changes
-        write_json_file(COMMANDS_FILE, new_commands)
-
-        logger.info(f"Successfully deleted command {command_id} for User {user_id}.")
-        return {"status": "deleted", "id": command_id}
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        logger.error(f"Critical error deleting command {command_id}: {e}")
-        sentry_sdk.capture_exception(e)
-        raise HTTPException(
-            status_code=500,
-            detail="System could not delete the command. Please try again."
-        )
+@router.delete("/{command_id}")
+def remove_command(command_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    if not db_delete_command(current_user["id"], command_id):
+        raise HTTPException(status_code=404, detail="Command not found")
+    return {"status": "deleted", "id": command_id}
 
 
 @router.get("/search", response_model=List[CommandInDB])
-def search_commands(
-    q: Optional[str],
-    current_user: Dict[str, Any] = Depends(get_current_user)
-) -> List[CommandInDB]:
-    """
-    Search the authenticated user's commands.
-
-    This endpoint returns a filtered list of commands belonging to the current user.
-    The search can be performed using one or both of the following query parameters:
-
-    - **q**: A general search term that is matched (case‑insensitive) against:
-        - command name
-        - command content (the actual shell command)
-        - description
-        - each tag in the command's tag list
-
-    If no parameters are provided, the endpoint returns **all** commands for the user
-    (same as the main `GET /dashboard/commands` endpoint).
-
-    Args:
-        q (Optional[str]): General search keyword. Defaults to None.
-        current_user (Dict[str, Any]): The authenticated user (injected dependency).
-
-    Returns:
-        List[CommandInDB]: A list of command objects that match the search criteria.
-
-    Raises:
-        HTTPException: 500 if an unexpected error occurs while reading the commands file.
-    """
-    user_id = current_user.get("id")
-    logger.info(f"User {user_id} searching commands with q={q}")
-    commands_data = read_json_file(COMMANDS_FILE)
-
-    user_commands = [cmd for cmd in commands_data if cmd.get("user_id") == user_id]
-
+def search_commands(q: Optional[str] = None, current_user: Dict[str, Any] = Depends(get_current_user)):
+    commands = list_commands(current_user["id"])
     if q:
-        q_lower = q.lower()
-        user_commands = [
-            cmd for cmd in user_commands
-            if (q_lower in cmd.get("name", "").lower() or
-                q_lower in cmd.get("command", "").lower() or
-                q_lower in cmd.get("description", "").lower() or
-                any(q_lower in tag.lower() for tag in cmd.get("tags", [])))
-        ]
+        term = q.casefold()
+        commands = [x for x in commands if term in x["name"].casefold() or term in x["command"].casefold() or term in x["description"].casefold() or any(term in tag.casefold() for tag in x["tags"])]
+    return commands
 
 
-    logger.debug(f"Search returned {len(user_commands)} commands for user {user_id}")
-    return user_commands
-
-@router.get("/{command_id}", response_model=Dict[str, Any])
-def get_command(
-        command_id: str,
-        current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Dict[str, Any]:
-    """
-    Retrieves the details of a single command by its ID.
-
-    Iterates through the JSON file to find a matching command ID.
-    Returns 404 if the ID does not exist.
-
-    Args:
-        command_id (str): The unique UUID of the command to retrieve.
-        current_user (Dict[str, Any]): The authenticated user context.
-
-    Returns:
-        Dict[str, Any]: The complete command object.
-
-    Raises:
-        HTTPException (404): If the command ID is not found.
-        HTTPException (500): If the file system is unreadable.
-    """
-    user_id = current_user.get("id")
-    logger.debug(f"User {user_id} fetching details for command {command_id}")
-
-    try:
-        commands = read_json_file(COMMANDS_FILE)
-
-        # 1. Secure Search
-        # We look for a match on BOTH the Command ID and the User ID.
-        command = next(
-            (cmd for cmd in commands if
-             cmd.get("id") == command_id and cmd.get("user_id") == user_id),
-            None
-        )
-
-        if not command:
-            logger.warning(
-                f"Command {command_id} not found or unauthorized for User {user_id}")
-            # Corrected status code from 500 to 404 for 'Not Found'
-            raise HTTPException(
-                status_code=404,
-                detail="Command not found"
-            )
-
-        return command
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        logger.error(f"Error retrieving command {command_id}: {e}")
-        sentry_sdk.capture_exception(e)
-
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error"
-        )
+@router.get("/{command_id}", response_model=CommandInDB)
+def get_command(command_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    command = db_get_command(current_user["id"], command_id)
+    if not command:
+        raise HTTPException(status_code=404, detail="Command not found")
+    return command
 
 
-@router.put("/{command_id}", response_model=Dict[str, Any])
-def update_command(
-        command_id: str,
-        command_data: CommandItem,
-        current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Dict[str, Any]:
-    """
-    Updates an existing command configuration.
-
-    Performs validation on the input data (name length, dangerous characters, tags),
-    updates the record in the local JSON storage, and updates the timestamp.
-
-    Args:
-        command_id (str): The unique UUID of the command to update.
-        command_data (CommandItem): The new data payload.
-        current_user (Dict[str, Any]): The authenticated user context.
-
-    Returns:
-        Dict[str, Any]: A success message and the updated command object.
-
-    Raises:
-        HTTPException (400): If validation fails (bad name, dangerous chars, etc.).
-        HTTPException (404): If the command ID does not exist.
-        HTTPException (500): If the file write operation fails.
-    """
-    user_id = current_user.get("id")
-    logger.info(f"User {user_id} attempting to update command {command_id}")
-
+@router.put("/{command_id}")
+def update_command(command_id: str, command_data: CommandItem, current_user: Dict[str, Any] = Depends(get_current_user)):
     if not command_data.name or len(command_data.name) > 100:
-        raise HTTPException(
-            status_code=400,
-            detail="Name must be between 1 and 100 characters."
-        )
-
+        raise HTTPException(status_code=400, detail="Name must be between 1 and 100 characters.")
     if DANGEROUS_CHARS_PATTERN.search(command_data.command):
-        logger.warning(f"Security Alert: User {user_id} used illegal chars.")
-        raise HTTPException(
-            status_code=400,
-            detail="Command action contains illegal characters."
-        )
+        raise HTTPException(status_code=400, detail="Command action contains illegal characters.")
+    updated = save_command(current_user["id"], command_data.model_dump(), command_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Command not found")
+    return {"status": "success", "message": "Command updated successfully", "command": updated}
 
+
+@router.post("/{command_id}/execute")
+def execute_command(command_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    command = db_get_command(current_user["id"], command_id)
+    if not command:
+        raise HTTPException(status_code=404, detail="Command not found")
+    value = command["command"].strip()
+    allowed = ("ls", "pwd", "whoami", "date", "echo", "ps", "df", "uptime", "uname", "free", "top", "htop", "docker", "git", "npm", "python", "node", "curl", "wget", "grep", "find", "cat", "head", "tail", "wc", "du", "ping")
     try:
-        commands = read_json_file(COMMANDS_FILE)
-        command_index = next(
-            (i for i, c in enumerate(commands)
-             if c.get("id") == command_id and c.get("user_id") == user_id),
-            None
-        )
-
-        if command_index is None:
-            logger.warning(
-                f"Update unauthorized or not found: {command_id} for User {user_id}")
-            raise HTTPException(
-                status_code=404,
-                detail="Command not found"
-            )
-
-        # --- 3. Apply Update ---
-        update_payload = command_data.model_dump(exclude_none=True)
-        current_command = commands[command_index]
-
-        updated_command = current_command.copy()
-        updated_command.update(update_payload)
-
-        # Ensure metadata remains consistent
-        updated_command["updated_at"] = datetime.now().isoformat()
-        updated_command["id"] = command_id  # Prevent ID hijacking
-        updated_command["user_id"] = user_id  # Prevent ownership hijacking
-
-        # Save
-        commands[command_index] = updated_command
-        write_json_file(COMMANDS_FILE, commands)
-
-        logger.info(f"Successfully updated command {command_id} for User {user_id}")
-
-        return {
-            "status": "success",
-            "message": "Command updated successfully",
-            "command": updated_command
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Critical error updating command {command_id}: {e}")
-        sentry_sdk.capture_exception(e)
-        raise HTTPException(
-            status_code=500,
-            detail="System was unable to update the command."
-        )
-
-
-@router.post("/{command_id}/execute", response_model=Dict[str, Any])
-def execute_command(
-        command_id: str,
-        current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Dict[str, Any]:
-    """
-    Executes a saved system command by its ID.
-
-    1. Looks up the command in the JSON file using command_id.
-    2. Verifies it belongs to the current user.
-    3. Checks against the security allowlist.
-    4. Executes it.
-    """
-    user_id = current_user.get("id")
-
+        argv = shlex.split(value, posix=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid command syntax") from exc
+    if not argv or argv[0] not in allowed or any(token in {";", "&&", "||", "|", ">", "<", "`"} for token in argv):
+        raise HTTPException(status_code=403, detail="Command is not allowed for security reasons.")
     try:
-        # 1. LOAD command from file (Secure Source)
-        commands = read_json_file(COMMANDS_FILE)
-
-        saved_command = next(
-            (c for c in commands if
-             c.get("id") == command_id and c.get("user_id") == user_id),
-            None
-        )
-
-        if not saved_command:
-            logger.warning(
-                f"Execute failed: Command {command_id} not found for User {user_id}")
-            raise HTTPException(status_code=404, detail="Command not found.")
-
-        # Extract the actual command string from the saved record
-        command_str = saved_command.get("command")
-        if not command_str:
-            raise HTTPException(status_code=400, detail="Saved command is empty.")
-
-        # 2. Security Check (Allowlist)
-        allowed_prefixes = [
-            "ls", "pwd", "whoami", "date", "echo", "ps", "df", "uptime",
-            "uname", "free", "top", "htop", "netstat", "ifconfig", "ip",
-            "systemctl", "service", "docker", "git", "npm",
-            "python", "node", "curl", "wget", "grep", "find", "cat", "head",
-            "tail", "wc", "du", "who", "last", "ping", "traceroute"
-        ]
-
-        # Check if the command starts with any allowed prefix
-        if not any(
-                command_str.strip().startswith(prefix) for prefix in allowed_prefixes):
-            logger.warning(
-                f"Security Alert: User {user_id} tried running unauthorized: '{command_str}'")
-            raise HTTPException(
-                status_code=403,  # 403 Forbidden is better than 500 here
-                detail=f"Command '{command_str.split()[0]}' is not allowed for security reasons."
-            )
-
-        logger.info(f"User {user_id} executing: '{command_str}'")
-
-        # 3. Execute
-        result = subprocess.run(
-            command_str,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-
-        return {
-            "status": "success" if result.returncode == 0 else "error",
-            "return_code": result.returncode,
-            "stdout": result.stdout.strip() if result.stdout else "",
-            "stderr": result.stderr.strip() if result.stderr else ""
-        }
-
-    except HTTPException:
-        raise
+        result = subprocess.run(argv, shell=False, capture_output=True, text=True, timeout=10)
+        return {"status": "success" if result.returncode == 0 else "error", "return_code": result.returncode, "stdout": result.stdout.strip(), "stderr": result.stderr.strip()}
     except subprocess.TimeoutExpired:
-        logger.error(f"Command timed out: {command_id}")
         raise HTTPException(status_code=504, detail="Command timed out (limit: 10s)")
-    except Exception as e:
-        logger.error(f"Execution error for {command_id}: {e}")
-        sentry_sdk.capture_exception(e)
-        raise HTTPException(status_code=500,
-                            detail="Internal server error during execution.")

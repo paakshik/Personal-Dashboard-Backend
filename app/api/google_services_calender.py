@@ -10,7 +10,8 @@ from app.utils.google_services_calender_helper import (classify_events_by_date,
                                                        search_calendar_events as search_helper)
 
 
-router = APIRouter(prefix="/dashboard/calender", tags=["Google Services"])
+router = APIRouter(prefix="/dashboard/calendar", tags=["Google Services"])
+legacy_router = APIRouter(prefix="/dashboard/calender", tags=["Google Services (legacy)"])
 
 time_default = '+00:00'
 
@@ -58,8 +59,7 @@ def search_calendar_events(
     Search the user's primary Google Calendar events.
 
     This endpoint uses Google Calendar's built‑in search (`q` parameter) to filter
-    events by title, description, and location. You can also restrict the time window
-    with `timeMin` and `timeMax`. The results are grouped by date for easy display.
+    events by title, description, and location.
 
     Args:
         q: Optional search keyword.

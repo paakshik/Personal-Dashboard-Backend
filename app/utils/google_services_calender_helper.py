@@ -128,6 +128,7 @@ def classify_events_by_date(raw_events: List[Dict[str, Any]]) -> List[Dict[str, 
                 "location": event.get('location', ''),
                 "time": time_display,
                 "start_raw": start_raw,
+                "end_raw": event.get('end', {}).get('dateTime', event.get('end', {}).get('date', start_raw)),
                 "link": event.get('htmlLink', '')
             }
 

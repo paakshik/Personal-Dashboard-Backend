@@ -8,7 +8,7 @@ import tempfile,shutil
 router = APIRouter(prefix="/dashboard/system", tags=["System Monitoring"])
 
 
-@router.get("processes")
+@router.get("/processes")
 def get_processes() -> List[Dict[str, Any]]:
     """
     Retrieves a list of the top resource-consuming processes currently running.
