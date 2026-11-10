@@ -128,6 +128,11 @@ def _todoist_request(method: str, url: str, user_id: str, json_content: bool = F
             access_token = new_tokens["access_token"]
         response = attempt(access_token)
 
+        # Cleanup: drop this user's refresh-lock entry once the refresh is done so
+        # the in-memory _refresh_locks dict does not grow unboundedly over time.
+        with _refresh_locks_lock:
+            _refresh_locks.pop(user_id, None)
+
     return response
 
 
