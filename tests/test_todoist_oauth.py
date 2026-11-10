@@ -1,6 +1,6 @@
 import time
 
-import jwt
+from jose import jwt
 import pytest
 import requests_mock
 

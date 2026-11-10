@@ -69,6 +69,8 @@ TODOIST_AUTH_URL = optional_env("TODOIST_AUTH_URL", "https://app.todoist.com/oau
 TODOIST_TOKEN_URL = optional_env("TODOIST_TOKEN_URL", "https://api.todoist.com/oauth/access_token")
 TODOIST_SCOPES = optional_env("TODOIST_SCOPES", "task:read task:add task:update task:delete")
 TODOIST_STATE_TTL_SECONDS = int(optional_env("TODOIST_STATE_TTL_SECONDS", 600))
+TODOIST_TOKEN_ENCRYPTION_KEY = optional_env("TODOIST_TOKEN_ENCRYPTION_KEY", "")
+TODOIST_WEBHOOK_CALLBACK_URL = optional_env("TODOIST_WEBHOOK_CALLBACK_URL", "")
 DASHBOARD_OWNER_EMAIL = optional_env("DASHBOARD_OWNER_EMAIL", "").strip()
 SENTRY_DSN = optional_env("SENTRY_DSN")
 if SENTRY_DSN:

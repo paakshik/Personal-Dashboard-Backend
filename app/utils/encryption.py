@@ -5,11 +5,11 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-from app.config import SECRET_KEY
+from app.config import SECRET_KEY, TODOIST_TOKEN_ENCRYPTION_KEY
 
 
 def derive_key(secret_key: str) -> bytes:
-    """Derive a 32-byte encryption key from the app SECRET_KEY using HKDF-SHA256."""
+    """Derive a 32-byte encryption key from the given secret using HKDF-SHA256."""
     kdf = HKDF(
         algorithm=hashes.SHA256(),
         length=32,
@@ -19,8 +19,11 @@ def derive_key(secret_key: str) -> bytes:
     return kdf.derive(secret_key.encode("utf-8"))
 
 
-# Derive the key once at import time from the required SECRET_KEY.
-_KEY = derive_key(SECRET_KEY)
+# Resolve the encryption key: prefer TODOIST_TOKEN_ENCRYPTION_KEY when configured,
+# otherwise fall back to SECRET_KEY (preserves existing encrypted tokens). The key
+# is derived once at import time and never regenerated at startup.
+_ENCRYPTION_SOURCE = TODOIST_TOKEN_ENCRYPTION_KEY or SECRET_KEY
+_KEY = derive_key(_ENCRYPTION_SOURCE)
 
 
 def encrypt(plaintext: str) -> dict:
