@@ -97,6 +97,8 @@ async def stream_gemini_response(websocket: WebSocket, model: Any, message_parts
                 await websocket.send_json({"type": "chunk", "text": chunk.text})
                 full_response += chunk.text
                 await asyncio.sleep(0)
+        if not full_response.strip():
+            await websocket.send_json({"type": "error", "message": "Gemini returned an empty response. Check the Render backend logs and confirm the key can access the configured model."})
         return full_response
     except Exception as exc:
         error_message = describe_gemini_error(exc)
