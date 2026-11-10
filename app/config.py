@@ -33,7 +33,7 @@ def optional_env(key: str, default=None):
 SECRET_KEY = require_env("SECRET_KEY")
 ALGORITHM = optional_env("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(optional_env("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
-FRONTEND_URL = optional_env("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = optional_env("FRONTEND_URL", "https://personal-dashboard-frontend-chi.vercel.app")
 AUTHLIB_INSECURE_TRANSPORT = optional_env("AUTHLIB_INSECURE_TRANSPORT", "0")
 CREDENTIALS_FILE = optional_env("CREDENTIALS_FILE", "credentials.json")
 BACKEND_REDIRECT_URI = optional_env("BACKEND_REDIRECT_URI")
@@ -41,7 +41,7 @@ GOOGLE_CLIENT_ID = optional_env("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = optional_env("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = optional_env("GOOGLE_REDIRECT_URI", "")
 REDIS_URL = optional_env("REDIS_URL")
-ALLOWED_ORIGINS = [origin.strip() for origin in optional_env("ALLOWED_ORIGINS", f"{FRONTEND_URL},http://localhost:5173").split(",") if origin.strip()]
+ALLOWED_ORIGINS = [origin.strip().rstrip("/") for origin in optional_env("ALLOWED_ORIGINS", f"{FRONTEND_URL},http://localhost:5173").split(",") if origin.strip()]
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar",
