@@ -13,7 +13,8 @@ JSON_DOCUMENT = JSON().with_variant(JSONB, "postgresql")
 
 
 class User(Base):
-    __tablename__ = "users"
+    # Keep separate from an existing Supabase public.users table that uses integer IDs.
+    __tablename__ = "dashboard_users"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     google_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
@@ -24,7 +25,7 @@ class User(Base):
 
 class GoogleCredential(Base):
     __tablename__ = "google_credentials"
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("dashboard_users.id", ondelete="CASCADE"), primary_key=True)
     access_token: Mapped[str] = mapped_column(Text)
     refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     token_uri: Mapped[str] = mapped_column(Text)
@@ -39,7 +40,7 @@ class Project(Base):
     __tablename__ = "projects"
     __table_args__ = (CheckConstraint("progress >= 0 AND progress <= 100", name="ck_projects_progress_range"), Index("ix_projects_user_created", "user_id", "created_at"))
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("dashboard_users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text)
     progress: Mapped[int] = mapped_column(Integer, default=0)
@@ -55,7 +56,7 @@ class Project(Base):
 class Command(Base):
     __tablename__ = "commands"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("dashboard_users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(255))
     command: Mapped[str] = mapped_column(Text)
     description: Mapped[str] = mapped_column(Text, default="")
@@ -69,7 +70,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
     __table_args__ = (CheckConstraint("role IN ('user', 'assistant', 'system')", name="ck_chat_role"), Index("ix_chat_user_timestamp", "user_id", "timestamp"))
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("dashboard_users.id", ondelete="CASCADE"), index=True)
     role: Mapped[str] = mapped_column(String(32))
     text: Mapped[str] = mapped_column(Text)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

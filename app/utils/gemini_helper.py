@@ -37,7 +37,8 @@ async def gather_user_context(current_user: Dict[str, Any]) -> str:
             headers = metadata.get("payload", {}).get("headers", [])
             subject = next((h["value"] for h in headers if h["name"] == "Subject"), "No Subject")
             snippets.append(f"{subject}: {metadata.get('snippet', '')}")
-        return f"User {email}\nUpcoming calendar:\n{calendar_text[:3000]}\nTasks:\n{task_text[:3000]}\nRecent email subjects:\n{'\n'.join(snippets)[:2000]}"
+        email_text = "\n".join(snippets)[:2000]
+        return f"User {email}\nUpcoming calendar:\n{calendar_text[:3000]}\nTasks:\n{task_text[:3000]}\nRecent email subjects:\n{email_text}"
     except Exception as exc:
         logger.warning("Personal context failed for %s: %s", email, exc)
         sentry_sdk.capture_exception(exc)
