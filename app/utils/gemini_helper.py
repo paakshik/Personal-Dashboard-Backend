@@ -126,13 +126,18 @@ def _fmt_commands(commands: List[Dict[str, Any]]) -> str:
 
 
 async def _load_source(label: str, loader, *args):
-    """Run a blocking loader in a thread. A failing source is skipped, not fatal."""
+    """Run a blocking loader in a thread. A failing source is skipped, not fatal.
+
+    Returns (data, error) where data is the loader result (or None on failure)
+    and error is a human-readable message (or None on success).
+    """
     try:
-        return await asyncio.to_thread(loader, *args)
+        return await asyncio.to_thread(loader, *args), None
     except Exception as exc:
-        logger.warning("Context source '%s' failed: %s", label, exc)
+        message = str(exc) or type(exc).__name__
+        logger.warning("Context source '%s' failed: %s", label, message)
         sentry_sdk.capture_exception(exc)
-        return None
+        return None, message
 
 
 async def gather_user_context(current_user: Dict[str, Any]) -> str:
@@ -158,7 +163,10 @@ async def gather_user_context(current_user: Dict[str, Any]) -> str:
         return snippets
 
     # All sources load at the same time, and each one can fail on its own.
-    tasks, events, emails, projects, commands = await asyncio.gather(
+    (tasks, tasks_error), (events, events_error), (emails, emails_error), (
+        projects,
+        projects_error,
+    ), (commands, commands_error) = await asyncio.gather(
         _load_source("tasks", get_todoist_tasks, current_user),
         _load_source("calendar", load_calendar),
         _load_source("gmail", load_emails),
@@ -166,17 +174,19 @@ async def gather_user_context(current_user: Dict[str, Any]) -> str:
         _load_source("commands", list_commands, user_id),
     )
 
-    def section(title: str, body: str, available: bool, limit: int) -> str:
-        return f"{title}:\n{body if available else 'Unavailable right now'}"[:limit]
+    def section(title: str, body: str, available: bool, limit: int, error: str | None = None) -> str:
+        if not available:
+            return f"{title}: {error or 'Unavailable right now'}"[:limit]
+        return f"{title}:\n{body}"[:limit]
 
     parts = [
         f"User: {email}",
         "Use the data below when it is relevant. If something is not listed, say you do not have it.",
-        section("Upcoming calendar (next 30 days)", _fmt_events(events or []), events is not None, 3000),
-        section("Open tasks", _fmt_tasks(tasks or []), tasks is not None, 3000),
-        section("Recent emails", "\n".join(emails or []) or "No recent emails", emails is not None, 2000),
-        section("Projects", _fmt_projects(projects or []), projects is not None, 4000),
-        section("Saved commands", _fmt_commands(commands or []), commands is not None, 2500),
+        section("Upcoming calendar (next 30 days)", _fmt_events(events or []), events is not None, 3000, events_error),
+        section("Open tasks", _fmt_tasks(tasks or []), tasks is not None, 3000, tasks_error),
+        section("Recent emails", "\n".join(emails or []) or "No recent emails", emails is not None, 2000, emails_error),
+        section("Projects", _fmt_projects(projects or []), projects is not None, 4000, projects_error),
+        section("Saved commands", _fmt_commands(commands or []), commands is not None, 2500, commands_error),
     ]
     return "\n\n".join(parts)
 

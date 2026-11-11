@@ -257,7 +257,7 @@ class TestTodoistOAuth:
         with requests_mock.Mocker() as m:
             m.get(
                 "https://api.todoist.com/api/v1/tasks",
-                json={"results": [{"id": "1", "content": "Task A"}]},
+                json=[{"id": "1", "content": "Task A"}],
             )
 
             # User A's request uses user A's credential and succeeds.

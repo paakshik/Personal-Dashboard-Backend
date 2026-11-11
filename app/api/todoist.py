@@ -158,11 +158,14 @@ def get_todoist_tasks(current_user: Dict[str, Any] = Depends(get_current_user)):
         except ValueError as exc:
             logger.error("Todoist task response was not valid JSON")
             raise HTTPException(status_code=502, detail="Todoist returned an invalid task response") from exc
-        if not isinstance(payload, dict):
+        if isinstance(payload, list):
+            tasks = payload
+        elif isinstance(payload, dict):
+            tasks = payload.get("results", payload.get("tasks"))
+            if tasks is None and isinstance(payload.get("items"), list):
+                tasks = payload["items"]
+        else:
             raise HTTPException(status_code=502, detail="Todoist returned an invalid task response")
-        tasks = payload.get("results", payload.get("tasks"))
-        if tasks is None and isinstance(payload.get("items"), list):
-            tasks = payload["items"]
         if not isinstance(tasks, list):
             raise HTTPException(status_code=502, detail="Todoist returned an invalid task list")
         return [
@@ -197,7 +200,12 @@ def search_todoist_tasks(q: Optional[str] = None, current_user: Dict[str, Any] =
             params={"query": f"search: {q}"} if q else {},
         )
         response.raise_for_status()
-        return response.json().get("results", [])
+        payload = response.json()
+        if isinstance(payload, list):
+            return payload
+        if isinstance(payload, dict):
+            return payload.get("results", [])
+        raise HTTPException(status_code=502, detail="Todoist returned an invalid task response")
     except HTTPException:
         raise
     except requests.RequestException as exc:
