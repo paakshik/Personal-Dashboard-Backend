@@ -1,15 +1,16 @@
 import base64
 import hashlib
 import secrets
-import threading
 import time
-from typing import Any, Dict, Tuple
+from typing import Tuple
 from urllib.parse import urlencode
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from app.database import session_scope
+from app.db_models import TodoistOAuthState
 from app.config import (
     FRONTEND_URL,
     TODOIST_AUTH_URL,
@@ -18,19 +19,21 @@ from app.config import (
     TODOIST_REDIRECT_URI,
     TODOIST_SCOPES,
     TODOIST_STATE_TTL_SECONDS,
+    TODOIST_TOKEN_URL,
     logger,
 )
 from app.dependencies import get_current_user
-from app.db_store import delete_todoist_credential, get_todoist_credential
+from app.db_store import (
+    consume_todoist_oauth_state,
+    delete_todoist_credential,
+    get_todoist_credential,
+    save_todoist_oauth_state,
+)
 
 # Router for Todoist OAuth 2.0 authorization-code flow (per-user connection).
 router = APIRouter(prefix="/dashboard/todoist/auth", tags=["Todoist Auth"])
 
-# Thread-safe, in-memory OAuth state store.
-# state -> {"user_id": str, "code_verifier": str, "created_at": float}
-# One-time-use, TTL-bound, bound to the internal user_id (not email).
-_OAUTH_STATE: Dict[str, Dict[str, Any]] = {}
-_OAUTH_STATE_LOCK = threading.Lock()
+# OAuth state is stored in the shared SQL database so callbacks can land on any worker.
 
 
 def _todoist_configured() -> bool:
@@ -39,22 +42,16 @@ def _todoist_configured() -> bool:
 
 
 def _cleanup_expired_state(now: float) -> None:
-    """Remove expired state entries from the store."""
-    with _OAUTH_STATE_LOCK:
-        expired = [
-            state
-            for state, entry in _OAUTH_STATE.items()
-            if now - entry.get("created_at", 0) > TODOIST_STATE_TTL_SECONDS
-        ]
-        for state in expired:
-            _OAUTH_STATE.pop(state, None)
+    """Remove expired state entries from shared SQL storage."""
+    with session_scope() as db:
+        db.query(TodoistOAuthState).filter(TodoistOAuthState.expires_at < now).delete(synchronize_session=False)
 
 
 def _create_oauth_state(user_id: str) -> Tuple[str, str]:
     """Generate OAuth state + PKCE code challenge, bind to the internal user_id.
 
-    Stores the code_verifier in the thread-safe TTL store keyed by state so the
-    callback can validate PKCE later. The state is one-time-use and expires after
+    Stores the encrypted code_verifier in shared SQL storage keyed by state so
+    callbacks can validate PKCE across workers. State expires after
     TODOIST_STATE_TTL_SECONDS.
 
     Returns (state, code_challenge).
@@ -70,12 +67,12 @@ def _create_oauth_state(user_id: str) -> Tuple[str, str]:
         hashlib.sha256(code_verifier.encode("ascii")).digest()
     ).rstrip(b"=").decode("ascii")
 
-    with _OAUTH_STATE_LOCK:
-        _OAUTH_STATE[state] = {
-            "user_id": user_id,
-            "code_verifier": code_verifier,
-            "created_at": now,
-        }
+    save_todoist_oauth_state(
+        state,
+        user_id,
+        code_verifier,
+        now + TODOIST_STATE_TTL_SECONDS,
+    )
 
     return state, code_challenge
 
@@ -155,20 +152,21 @@ def _handle_todoist_callback(request: Request) -> RedirectResponse:
 
     code = request.query_params.get("code")
     state = request.query_params.get("state")
+    oauth_error = request.query_params.get("error")
 
-    if not code or not state:
-        raise HTTPException(status_code=400, detail="Missing authorization code or state")
+    if not state:
+        raise HTTPException(status_code=400, detail="Missing OAuth state")
 
     now = time.time()
 
-    # One-time-use: pop/remove the state entry as soon as it is read.
-    with _OAUTH_STATE_LOCK:
-        entry = _OAUTH_STATE.pop(state, None)
-
+    # Atomic SQL DELETE/RETURNING makes the state one-time across all workers.
+    entry = consume_todoist_oauth_state(state, now)
     if entry is None:
         raise HTTPException(status_code=400, detail="OAuth session expired or invalid")
-    if now - entry.get("created_at", 0) > TODOIST_STATE_TTL_SECONDS:
-        raise HTTPException(status_code=400, detail="OAuth session expired")
+    if oauth_error:
+        return RedirectResponse(url=f"{FRONTEND_URL}?todoist=error", status_code=302)
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing authorization code")
 
     user_id = entry.get("user_id")
     if not user_id:
@@ -188,9 +186,9 @@ def _handle_todoist_callback(request: Request) -> RedirectResponse:
         token_response = requests.post(TODOIST_TOKEN_URL, data=token_payload, timeout=15)
         token_response.raise_for_status()
         tokens = token_response.json()
-    except requests.RequestException as exc:
-        # Never log the authorization code or any token values.
-        logger.error("Todoist token exchange failed: %s", exc)
+    except requests.RequestException:
+        # Avoid logging provider exception text, which could contain sensitive data.
+        logger.error("Todoist token exchange failed")
         return RedirectResponse(url=f"{FRONTEND_URL}?todoist=error", status_code=302)
 
     access_token = tokens.get("access_token")

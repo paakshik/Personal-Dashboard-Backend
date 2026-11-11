@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select, delete
 from app.database import session_scope
-from app.db_models import User, GoogleCredential, TodoistCredential, Project, Command, ChatMessage, SystemMetric
+from app.db_models import User, GoogleCredential, TodoistCredential, TodoistOAuthState, Project, Command, ChatMessage, SystemMetric
 from app.utils.encryption import encrypt, decrypt
 from app.cache import get_json, set_json, delete_pattern
 
@@ -139,6 +139,37 @@ def save_todoist_credential(user_id, tokens_dict):
         db.flush()
     delete_pattern(f"user:{user_id}:todoist:*")
     return True
+
+
+def save_todoist_oauth_state(state, user_id, code_verifier, expires_at):
+    """Persist OAuth state shared across workers; callers consume it atomically."""
+    with session_scope() as db:
+        db.add(TodoistOAuthState(
+            state=state,
+            user_id=str(user_id),
+            encrypted_code_verifier=json.dumps(encrypt(code_verifier)),
+            expires_at=float(expires_at),
+        ))
+
+
+def consume_todoist_oauth_state(state, now):
+    """Atomically delete and return a still-valid state from shared SQL storage."""
+    from sqlalchemy import text
+
+    with session_scope() as db:
+        statement = text(
+            "DELETE FROM todoist_oauth_states "
+            "WHERE state = :state AND expires_at >= :now "
+            "RETURNING user_id, encrypted_code_verifier, expires_at"
+        )
+        result = db.execute(statement, {"state": state, "now": float(now)}).mappings().first()
+        if not result:
+            return None
+        return {
+            "user_id": result["user_id"],
+            "code_verifier": decrypt(json.loads(result["encrypted_code_verifier"])),
+            "expires_at": result["expires_at"],
+        }
 
 
 def get_todoist_credential(user_id):

@@ -37,6 +37,15 @@ def create_app() -> FastAPI:
                         allow_origin_regex=r"https://personal-dashboard-frontend-[a-z0-9-]+\.vercel\.app",allow_credentials=True, allow_methods=["*"], allow_headers=["*"]))
     for router in (auth_router, overview_router, calendar_router, gmail_router, drive_router, projects_router, commands_router, gemini_upload_router, ai_stream_router, system_stream_router, todoist_router, todoist_auth_router, todoist_webhook_router, sys_monitor_router, sys_analytics_router, sys_ops_router):
         app.include_router(router)
+    # Preserve the provider-registered URL while retaining the legacy dashboard callback.
+    from app.api.todoist_auth import _handle_todoist_callback
+    from fastapi import Request
+    from fastapi.responses import RedirectResponse
+
+    def todoist_registered_callback(request: Request) -> RedirectResponse:
+        return _handle_todoist_callback(request)
+
+    app.add_api_route("/integrations/todoist/callback", todoist_registered_callback, methods=["GET"], include_in_schema=False)
 
     @app.get("/health", tags=["System"])
     async def health_check():

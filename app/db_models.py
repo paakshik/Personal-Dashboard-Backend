@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, JSON, String, Text, Index
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Integer, JSON, String, Text, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
@@ -47,6 +47,15 @@ class TodoistCredential(Base):
     scopes: Mapped[list] = mapped_column(JSON_DOCUMENT, default=list)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class TodoistOAuthState(Base):
+    """Shared, expiring, one-time OAuth state for multi-worker deployments."""
+    __tablename__ = "todoist_oauth_states"
+    state: Mapped[str] = mapped_column(String(128), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("dashboard_users.id", ondelete="CASCADE"), index=True)
+    encrypted_code_verifier: Mapped[str] = mapped_column(Text, nullable=False)
+    expires_at: Mapped[float] = mapped_column(Float, nullable=False, index=True)
 
 
 class Project(Base):
