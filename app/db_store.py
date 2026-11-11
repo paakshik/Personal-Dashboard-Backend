@@ -5,6 +5,7 @@ from sqlalchemy import select, delete
 from app.database import session_scope
 from app.db_models import User, GoogleCredential, TodoistCredential, TodoistOAuthState, Project, Command, ChatMessage, SystemMetric
 from app.utils.encryption import encrypt, decrypt
+from app.utils.token_expiry import normalize_aware_utc
 from app.cache import get_json, set_json, delete_pattern
 
 CACHE_TTL = 60
@@ -103,8 +104,9 @@ def save_todoist_credential(user_id, tokens_dict):
     scopes, expires_at, todoist_user_id. Only access_token is required.
     """
     access_token = tokens_dict.get("access_token")
-    if not access_token:
+    if not isinstance(access_token, str) or not access_token:
         return False
+    expires_at = normalize_aware_utc(tokens_dict.get("expires_at")) if "expires_at" in tokens_dict else None
     with session_scope() as db:
         row = db.get(TodoistCredential, str(user_id))
         encrypted_access = json.dumps(encrypt(access_token))
@@ -118,8 +120,8 @@ def save_todoist_credential(user_id, tokens_dict):
                 encrypted_refresh_token=encrypted_refresh,
                 token_uri=tokens_dict.get("token_uri", ""),
                 client_id=tokens_dict.get("client_id"),
-                scopes=tokens_dict.get("scopes", []),
-                expires_at=tokens_dict.get("expires_at"),
+                scopes=tokens_dict.get("scopes") or [],
+                expires_at=expires_at,
             )
             db.add(row)
         else:
@@ -133,10 +135,11 @@ def save_todoist_credential(user_id, tokens_dict):
                 row.client_id = tokens_dict["client_id"]
             if tokens_dict.get("scopes") is not None:
                 row.scopes = tokens_dict["scopes"]
-            if tokens_dict.get("expires_at") is not None:
-                row.expires_at = tokens_dict["expires_at"]
+            if "expires_at" in tokens_dict:
+                row.expires_at = expires_at
             row.updated_at = datetime.now(timezone.utc)
         db.flush()
+    # session_scope commits before returning; invalidate only after it succeeds.
     delete_pattern(f"user:{user_id}:todoist:*")
     return True
 
@@ -188,7 +191,7 @@ def get_todoist_credential(user_id):
             "token_uri": row.token_uri,
             "client_id": row.client_id,
             "scopes": row.scopes or [],
-            "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+            "expires_at": normalize_aware_utc(row.expires_at).isoformat() if row.expires_at else None,
             "updated_at": row.updated_at.isoformat() if row.updated_at else None,
             "todoist_user_id": row.todoist_user_id,
         }
@@ -226,7 +229,7 @@ def get_todoist_credential_by_todoist_user_id(todoist_user_id: str):
             "token_uri": row.token_uri,
             "client_id": row.client_id,
             "scopes": row.scopes or [],
-            "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+            "expires_at": normalize_aware_utc(row.expires_at).isoformat() if row.expires_at else None,
             "updated_at": row.updated_at.isoformat() if row.updated_at else None,
             "todoist_user_id": row.todoist_user_id,
         }

@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict
@@ -5,7 +6,7 @@ from fastapi import WebSocket, WebSocketDisconnect, Depends, APIRouter
 from google.genai import types
 from app.config import logger, sentry_sdk, GEMINI_API_KEY
 from app.dependencies import get_current_user_ws_ticket
-from app.utils.gemini_helper import should_enable_search, save_chat_message, gather_user_context, process_ai_attachment
+from app.utils.gemini_helper import should_enable_search, persist_conversation_message, gather_user_context, process_ai_attachment
 from app.utils.ai_tools import run_agent_turn
 
 router = APIRouter(prefix="/dashboard/gemini", tags=["Gemini AI"])
@@ -39,12 +40,40 @@ async def websocket_ai_stream(websocket: WebSocket, current_user: Dict[str, Any]
                 parts.append(attachment)
             search_tools = [types.Tool(google_search=types.GoogleSearch())] if should_enable_search(prompt) else []
             config = types.GenerateContentConfig(system_instruction=instruction, tools=search_tools)
-            await websocket.send_json({"type": "start"})
-            save_chat_message("user", prompt or "Analyze the attached file.", user_id, attachment_id, conversation_id)
+            await websocket.send_json({"type": "start", "conversation_id": conversation_id})
+            user_saved = await asyncio.to_thread(
+                persist_conversation_message,
+                "user",
+                prompt or "Analyze the attached file.",
+                user_id,
+                attachment_id,
+                conversation_id,
+            )
+            if not user_saved:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "Your message could not be saved. No AI response was generated; please retry.",
+                    "conversation_id": conversation_id,
+                })
+                continue
+
             response = await run_agent_turn(websocket, "gemini-2.5-flash", parts, config, current_user)
             if response:
-                save_chat_message("assistant", response, user_id, conversation_id=conversation_id)
-            await websocket.send_json({"type": "done"})
+                assistant_saved = await asyncio.to_thread(
+                    persist_conversation_message,
+                    "assistant",
+                    response,
+                    user_id,
+                    None,
+                    conversation_id,
+                )
+                if not assistant_saved:
+                    await websocket.send_json({
+                        "type": "persistence_error",
+                        "message": "The AI reply was generated but could not be saved to conversation history.",
+                        "conversation_id": conversation_id,
+                    })
+            await websocket.send_json({"type": "done", "conversation_id": conversation_id})
     except WebSocketDisconnect:
         logger.info("AI WebSocket disconnected for user %s", user_id)
     except Exception as exc:

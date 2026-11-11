@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
 from app.config import logger, sentry_sdk
 from app.db_store import get_todoist_credential, save_todoist_credential
+from app.utils.token_expiry import todoist_expires_at
 from app.models import TaskItem, TodoistTaskResponse
 from typing import Dict, Any, List, Optional
 
@@ -83,14 +84,18 @@ def _refresh_access_token(credential: dict) -> dict:
 
     # Token rotation: Todoist may issue a new refresh_token alongside the new
     # access_token. Keep the old refresh_token if none is returned.
+    new_access_token = data.get("access_token")
+    if not isinstance(new_access_token, str) or not new_access_token:
+        logger.error("Todoist refresh response did not contain an access token")
+        raise HTTPException(status_code=502, detail="Todoist refresh response was invalid; please reconnect")
     new_refresh_token = data.get("refresh_token") or refresh_token
     return {
-        "access_token": data.get("access_token"),
+        "access_token": new_access_token,
         "refresh_token": new_refresh_token,
         "token_uri": credential.get("token_uri"),
         "client_id": client_id,
         "scopes": credential.get("scopes", []),
-        "expires_at": data.get("expires_in"),
+        "expires_at": todoist_expires_at(data.get("expires_in")),
     }
 
 
@@ -117,15 +122,21 @@ def _todoist_request(method: str, url: str, user_id: str, json_content: bool = F
     response = attempt(access_token)
 
     if response.status_code == 401:
+        original_access_token = access_token
         lock = _get_refresh_lock(user_id)
         with lock:
-            # Re-fetch: another request may have already refreshed this user's tokens.
+            # Another in-flight request may already have rotated this user's token.
             credential = get_todoist_credential(user_id)
             if not credential:
                 raise HTTPException(status_code=403, detail="Todoist not connected")
-            new_tokens = _refresh_access_token(credential)
-            save_todoist_credential(user_id, new_tokens)
-            access_token = new_tokens["access_token"]
+            if credential["access_token"] == original_access_token:
+                new_tokens = _refresh_access_token(credential)
+                saved = save_todoist_credential(user_id, new_tokens)
+                if not saved:
+                    raise HTTPException(status_code=503, detail="Todoist refreshed credentials could not be saved")
+                access_token = new_tokens["access_token"]
+            else:
+                access_token = credential["access_token"]
         response = attempt(access_token)
 
         # Cleanup: drop this user's refresh-lock entry once the refresh is done so
@@ -142,7 +153,32 @@ def get_todoist_tasks(current_user: Dict[str, Any] = Depends(get_current_user)):
     try:
         response = _todoist_request("GET", API_URL, current_user["id"])
         response.raise_for_status()
-        return response.json().get("results", [])
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            logger.error("Todoist task response was not valid JSON")
+            raise HTTPException(status_code=502, detail="Todoist returned an invalid task response") from exc
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=502, detail="Todoist returned an invalid task response")
+        tasks = payload.get("results", payload.get("tasks"))
+        if tasks is None and isinstance(payload.get("items"), list):
+            tasks = payload["items"]
+        if not isinstance(tasks, list):
+            raise HTTPException(status_code=502, detail="Todoist returned an invalid task list")
+        return [
+            {
+                "id": task.get("id"),
+                "content": task.get("content"),
+                "description": task.get("description") or "",
+                "project_id": task.get("project_id"),
+                "due": task.get("due"),
+                "labels": task.get("labels") or [],
+                "priority": task.get("priority", 1),
+                "is_completed": bool(task.get("is_completed", task.get("is_complete", False))),
+            }
+            for task in tasks
+            if isinstance(task, dict)
+        ]
     except HTTPException:
         raise
     except requests.RequestException as exc:

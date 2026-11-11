@@ -23,6 +23,7 @@ from app.config import (
     logger,
 )
 from app.dependencies import get_current_user
+from app.utils.token_expiry import todoist_expires_at
 from app.db_store import (
     consume_todoist_oauth_state,
     delete_todoist_credential,
@@ -245,6 +246,7 @@ def _handle_todoist_callback(request: Request) -> RedirectResponse:
             {
                 "access_token": access_token,
                 "refresh_token": refresh_token,
+                "expires_at": todoist_expires_at(tokens.get("expires_in")),
                 "todoist_user_id": todoist_user_id,
                 "client_id": TODOIST_CLIENT_ID,
                 "token_uri": TODOIST_TOKEN_URL,

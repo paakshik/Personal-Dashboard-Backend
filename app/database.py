@@ -18,7 +18,7 @@ def _database_url() -> str:
 
 DATABASE_URL = _database_url()
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=int(os.getenv("DB_POOL_SIZE", "5")), max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "5")), pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "5")), pool_recycle=1800, connect_args=connect_args)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=int(os.getenv("DB_POOL_SIZE", "5")), max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "5")), pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "5")), pool_recycle=1800, connect_args=connect_args, hide_parameters=True, echo=False)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 

@@ -24,8 +24,38 @@ def create_gemini_client():
     )
 
 
-def save_chat_message(role: str, text: str, user_id: str, attachment_id: Optional[str] = None) -> Dict[str, Any]:
-    return persist_chat_message(role, text, user_id, attachment_id)
+def save_chat_message(
+    role: str,
+    text: str,
+    user_id: str,
+    attachment_id: Optional[str] = None,
+    conversation_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Persist a chat message, including attachment and conversation binding."""
+    return persist_chat_message(
+        role,
+        text,
+        user_id,
+        attachment_id=attachment_id,
+        conversation_id=conversation_id,
+    )
+
+
+def persist_conversation_message(
+    role: str,
+    text: str,
+    user_id: str,
+    attachment_id: Optional[str] = None,
+    conversation_id: Optional[str] = None,
+) -> bool:
+    """Persist a chat message and return failure without masking model errors."""
+    try:
+        save_chat_message(role, text, user_id, attachment_id, conversation_id)
+        return True
+    except Exception as exc:
+        logger.error("Chat message persistence failed (%s)", type(exc).__name__)
+        sentry_sdk.capture_exception(exc)
+        return False
 
 
 def should_enable_search(prompt: str) -> bool:
