@@ -443,18 +443,32 @@ async def run_agent_turn(websocket: WebSocket, model: str, message_parts: List[A
     contents = [types.Content(role="user", parts=[types.Part.from_text(text=part) if isinstance(part, str) else types.Part.from_uri(file_uri=part.uri, mime_type=getattr(part, "mime_type", None) or "application/octet-stream") for part in message_parts])]
     full_text = ""
     for _ in range(MAX_TOOL_ROUNDS):
-        stream = await client.aio.models.generate_content_stream(model=model, contents=contents, config=agent_config)
+        try:
+            stream = await client.aio.models.generate_content_stream(model=model, contents=contents, config=agent_config)
+        except Exception as exc:
+            error_message = describe_gemini_error(exc)
+            logger.error("Gemini stream failed (%s): %s", type(exc).__name__, exc, exc_info=True)
+            sentry_sdk.capture_exception(exc)
+            await _safe_send(websocket, {"type": "error", "message": error_message})
+            return full_text
         response_parts, function_calls = [], []
-        async for chunk in stream:
-            candidate = chunk.candidates[0] if chunk.candidates else None
-            if not candidate or not candidate.content: continue
-            for part in candidate.content.parts or []:
-                response_parts.append(part)
-                if part.function_call:
-                    function_calls.append(part.function_call)
-                elif part.text and not getattr(part, "thought", False):
-                    if not await _safe_send(websocket, {"type": "chunk", "text": part.text}): return full_text
-                    full_text += part.text
+        try:
+            async for chunk in stream:
+                candidate = chunk.candidates[0] if chunk.candidates else None
+                if not candidate or not candidate.content: continue
+                for part in candidate.content.parts or []:
+                    response_parts.append(part)
+                    if part.function_call:
+                        function_calls.append(part.function_call)
+                    elif part.text and not getattr(part, "thought", False):
+                        if not await _safe_send(websocket, {"type": "chunk", "text": part.text}): return full_text
+                        full_text += part.text
+        except Exception as exc:
+            error_message = describe_gemini_error(exc)
+            logger.error("Gemini stream iteration failed (%s): %s", type(exc).__name__, exc, exc_info=True)
+            sentry_sdk.capture_exception(exc)
+            await _safe_send(websocket, {"type": "error", "message": error_message})
+            return full_text
         if not function_calls:
             if not full_text.strip():
                 await _safe_send(websocket, {"type": "error", "message": "Gemini returned an empty response. Check backend logs and model access."})

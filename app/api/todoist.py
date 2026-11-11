@@ -35,8 +35,18 @@ def _build_headers(access_token: str, json_content: bool = False) -> dict:
 def _get_credential_or_403(user_id: str) -> dict:
     credential = get_todoist_credential(user_id)
     if not credential:
-        raise HTTPException(status_code=403, detail="Todoist not connected")
+        raise HTTPException(status_code=401, detail="Todoist not connected; reconnect_required")
     return credential
+
+
+def _delete_todoist_credential(user_id: str) -> None:
+    """Delete stored Todoist credential for a user so they must reconnect."""
+    try:
+        from app.db_store import delete_todoist_credential
+        delete_todoist_credential(user_id)
+    except Exception as exc:
+        logger.error("Failed to delete Todoist credential for user %s: %s", user_id, exc)
+        sentry_sdk.capture_exception(exc)
 
 
 def _refresh_access_token(credential: dict) -> dict:
@@ -53,8 +63,8 @@ def _refresh_access_token(credential: dict) -> dict:
 
     if not client_id or not client_secret or not refresh_token:
         raise HTTPException(
-            status_code=403,
-            detail="Todoist credentials cannot be refreshed; please reconnect",
+            status_code=401,
+            detail="Todoist credentials cannot be refreshed; reconnect_required",
         )
 
     try:
@@ -69,9 +79,10 @@ def _refresh_access_token(credential: dict) -> dict:
             timeout=15,
         )
         if response.status_code == 400:
+            logger.warning("Todoist refresh token rejected (HTTP 400); body=%s", response.text[:500])
             raise HTTPException(
-                status_code=403,
-                detail="Todoist refresh token invalid; please reconnect",
+                status_code=401,
+                detail="Todoist token rejected: 400; reconnect_required",
             )
         response.raise_for_status()
         data = response.json()
@@ -105,6 +116,9 @@ def _todoist_request(method: str, url: str, user_id: str, json_content: bool = F
 
     On a 401 (expired access token), performs refresh-token rotation once under
     a per-user lock and retries the request with the new access token.
+    If the refresh itself fails (invalid/expired refresh token), deletes the
+    stored credential and returns 401 with reconnect_required so the frontend
+    can ask the user to reconnect.
     """
     credential = _get_credential_or_403(user_id)
     access_token = credential["access_token"]
@@ -121,23 +135,45 @@ def _todoist_request(method: str, url: str, user_id: str, json_content: bool = F
 
     response = attempt(access_token)
 
-    if response.status_code == 401:
+    if response.status_code in (401, 403):
+        logger.warning("Todoist API rejected request (HTTP %s) for user %s; body=%s",
+                       response.status_code, user_id, response.text[:500])
         original_access_token = access_token
         lock = _get_refresh_lock(user_id)
         with lock:
             # Another in-flight request may already have rotated this user's token.
             credential = get_todoist_credential(user_id)
             if not credential:
-                raise HTTPException(status_code=403, detail="Todoist not connected")
+                _delete_todoist_credential(user_id)
+                raise HTTPException(status_code=401, detail="Todoist not connected; reconnect_required")
             if credential["access_token"] == original_access_token:
-                new_tokens = _refresh_access_token(credential)
+                try:
+                    new_tokens = _refresh_access_token(credential)
+                except HTTPException as exc:
+                    # Refresh failed: refresh token invalid/expired. Delete credential and require reconnect.
+                    _delete_todoist_credential(user_id)
+                    raise HTTPException(
+                        status_code=401,
+                        detail=f"Todoist token rejected: {exc.status_code}; reconnect_required",
+                    ) from exc
                 saved = save_todoist_credential(user_id, new_tokens)
                 if not saved:
-                    raise HTTPException(status_code=503, detail="Todoist refreshed credentials could not be saved")
+                    _delete_todoist_credential(user_id)
+                    raise HTTPException(status_code=401, detail="Todoist refreshed credentials could not be saved; reconnect_required")
                 access_token = new_tokens["access_token"]
             else:
                 access_token = credential["access_token"]
         response = attempt(access_token)
+
+        if response.status_code in (401, 403):
+            # Still rejected after refresh: credential is unusable.
+            _delete_todoist_credential(user_id)
+            logger.warning("Todoist credential still rejected after refresh (HTTP %s); deleted for user %s",
+                           response.status_code, user_id)
+            raise HTTPException(
+                status_code=401,
+                detail=f"Todoist token rejected: {response.status_code}; reconnect_required",
+            )
 
         # Cleanup: drop this user's refresh-lock entry once the refresh is done so
         # the in-memory _refresh_locks dict does not grow unboundedly over time.
@@ -145,6 +181,13 @@ def _todoist_request(method: str, url: str, user_id: str, json_content: bool = F
             _refresh_locks.pop(user_id, None)
 
     return response
+
+
+@router.get("/status")
+def get_todoist_status(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Return whether the current user has a stored Todoist access token."""
+    credential = get_todoist_credential(current_user["id"])
+    return {"connected": bool(credential and credential.get("access_token"))}
 
 
 @router.get("", response_model=List[TodoistTaskResponse])

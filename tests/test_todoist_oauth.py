@@ -235,12 +235,12 @@ class TestTodoistOAuth:
         )
         assert response.status_code == 400
 
-    def test_todoist_endpoint_403_when_not_connected(self, client):
+    def test_todoist_endpoint_401_when_not_connected(self, client):
         user_id = "todoist-no-cred"
         headers = _make_auth_headers(user_id, "nocred@example.com")
 
         response = client.get("/dashboard/todoist", headers=headers)
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_todoist_endpoint_user_isolation(self, client, monkeypatch):
         # User A has a Todoist credential; user B does not.
@@ -268,6 +268,7 @@ class TestTodoistOAuth:
             assert tasks[0]["id"] == "1"
             assert tasks[0]["content"] == "Task A"
 
-            # User B has no credential -> 403.
+            # User B has no credential -> 401 with reconnect_required.
             response_b = client.get("/dashboard/todoist", headers=headers_b)
-            assert response_b.status_code == 403
+            assert response_b.status_code == 401
+            assert "reconnect_required" in response_b.json()["error"]
