@@ -41,6 +41,14 @@ def _todoist_configured() -> bool:
     return bool(TODOIST_CLIENT_ID and TODOIST_CLIENT_SECRET and TODOIST_REDIRECT_URI)
 
 
+def _todoist_frontend_redirect(status: str, reason: str | None = None) -> RedirectResponse:
+    """Redirect with a bounded status code; never forward provider/token data."""
+    params = {"todoist": status}
+    if reason in {"token_exchange", "token_response", "credential_save"}:
+        params["reason"] = reason
+    return RedirectResponse(url=f"{FRONTEND_URL}?{urlencode(params)}", status_code=302)
+
+
 def _cleanup_expired_state(now: float) -> None:
     """Remove expired state entries from shared SQL storage."""
     with session_scope() as db:
@@ -154,6 +162,10 @@ def _handle_todoist_callback(request: Request) -> RedirectResponse:
     state = request.query_params.get("state")
     oauth_error = request.query_params.get("error")
 
+    # Provider errors can arrive before a valid OAuth session is established
+    # (for example, invalid_scope); send the user back safely without tokens.
+    if oauth_error and not state:
+        return RedirectResponse(url=f"{FRONTEND_URL}?todoist=error", status_code=302)
     if not state:
         raise HTTPException(status_code=400, detail="Missing OAuth state")
 
@@ -185,17 +197,26 @@ def _handle_todoist_callback(request: Request) -> RedirectResponse:
     try:
         token_response = requests.post(TODOIST_TOKEN_URL, data=token_payload, timeout=15)
         token_response.raise_for_status()
+    except requests.RequestException as exc:
+        # Log only the HTTP status, never exception text, authorization code, or tokens.
+        logger.error("Todoist token exchange failed (HTTP %s)", getattr(exc.response, "status_code", "unknown"))
+        return _todoist_frontend_redirect("error", "token_exchange")
+
+    try:
         tokens = token_response.json()
-    except requests.RequestException:
-        # Avoid logging provider exception text, which could contain sensitive data.
-        logger.error("Todoist token exchange failed")
-        return RedirectResponse(url=f"{FRONTEND_URL}?todoist=error", status_code=302)
+    except (ValueError, TypeError):
+        logger.error("Todoist token response was not valid JSON")
+        return _todoist_frontend_redirect("error", "token_response")
+
+    if not isinstance(tokens, dict):
+        logger.error("Todoist token response had an unexpected structure")
+        return _todoist_frontend_redirect("error", "token_response")
 
     access_token = tokens.get("access_token")
     refresh_token = tokens.get("refresh_token")
-    if not access_token:
-        logger.error("Todoist token exchange returned no access token")
-        return RedirectResponse(url=f"{FRONTEND_URL}?todoist=error", status_code=302)
+    if not isinstance(access_token, str) or not access_token:
+        logger.error("Todoist token response did not contain an access token")
+        return _todoist_frontend_redirect("error", "token_response")
 
     # Fetch the Todoist user profile to map the Todoist user ID to this
     # dashboard user. Needed for webhook event routing.
@@ -207,8 +228,10 @@ def _handle_todoist_callback(request: Request) -> RedirectResponse:
             timeout=15,
         )
         if profile_resp.status_code == 200:
-            todoist_user_id = profile_resp.json().get("id")
-    except requests.RequestException:
+            profile = profile_resp.json()
+            if isinstance(profile, dict):
+                todoist_user_id = profile.get("id")
+    except (requests.RequestException, ValueError, TypeError):
         # Non-fatal: webhook mapping won't work, but the connection is still valid.
         pass
 
@@ -216,16 +239,27 @@ def _handle_todoist_callback(request: Request) -> RedirectResponse:
     # Lazy import so this module loads even before db_store defines the function.
     from app.db_store import save_todoist_credential
 
-    save_todoist_credential(
-        user_id,
-        {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "todoist_user_id": todoist_user_id,
-        },
-    )
+    try:
+        saved = save_todoist_credential(
+            user_id,
+            {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "todoist_user_id": todoist_user_id,
+                "client_id": TODOIST_CLIENT_ID,
+                "token_uri": TODOIST_TOKEN_URL,
+                "scopes": [scope for scope in TODOIST_SCOPES.replace(" ", ",").split(",") if scope],
+            },
+        )
+    except Exception as exc:
+        logger.error("Todoist credentials could not be persisted (%s)", type(exc).__name__)
+        return _todoist_frontend_redirect("error", "credential_save")
 
-    return RedirectResponse(url=f"{FRONTEND_URL}?todoist=connected", status_code=302)
+    if not saved:
+        logger.error("Todoist credentials were not persisted")
+        return _todoist_frontend_redirect("error", "credential_save")
+
+    return _todoist_frontend_redirect("connected")
 
 
 @router.get("/callback")

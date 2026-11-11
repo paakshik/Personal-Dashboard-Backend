@@ -39,6 +39,7 @@ def create_app() -> FastAPI:
         app.include_router(router)
     # Preserve the provider-registered URL while retaining the legacy dashboard callback.
     from app.api.todoist_auth import _handle_todoist_callback
+    from app.db_store import get_todoist_credential
     from fastapi import Request
     from fastapi.responses import RedirectResponse
 
@@ -46,6 +47,11 @@ def create_app() -> FastAPI:
         return _handle_todoist_callback(request)
 
     app.add_api_route("/integrations/todoist/callback", todoist_registered_callback, methods=["GET"], include_in_schema=False)
+
+    @app.get("/dashboard/todoist/connection-status", tags=["Todoist Auth"], include_in_schema=False)
+    def todoist_connection_status_legacy(current_user: dict = Depends(get_current_user)):
+        """Authenticated compatibility alias for older deployed frontends."""
+        return {"connected": bool(get_todoist_credential(current_user["id"]))}
 
     @app.get("/health", tags=["System"])
     async def health_check():
