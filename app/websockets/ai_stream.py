@@ -57,7 +57,7 @@ async def websocket_ai_stream(websocket: WebSocket, current_user: Dict[str, Any]
                 })
                 continue
 
-            response = await run_agent_turn(websocket, "gemini-2.5-flash", parts, config, current_user)
+            response = await run_agent_turn(websocket, "gemini-3.5-flash-lite", parts, config, current_user)
             if response:
                 assistant_saved = await asyncio.to_thread(
                     persist_conversation_message,

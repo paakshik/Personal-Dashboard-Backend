@@ -125,7 +125,7 @@ async def generate_briefing(current_user: dict = Depends(get_current_user)) -> D
 
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash-lite",
             contents=[instruction],
         )
     except Exception as exc:
