@@ -28,6 +28,7 @@ from app.utils.google_services_gmail_helper import get_gmail_service
 
 IST = timezone(timedelta(hours=5, minutes=30))
 MAX_TOOL_ROUNDS = 6
+GEMINI_AGENT_FALLBACK_MODELS = ("gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite")
 CONFIRM_TIMEOUT_SECONDS = 120
 COMMAND_DANGEROUS = re.compile(r"[;&|`$<>\n\r]")
 
@@ -442,37 +443,79 @@ async def run_agent_turn(websocket: WebSocket, model: str, message_parts: List[A
     agent_config = _agent_config(config)
     contents = [types.Content(role="user", parts=[types.Part.from_text(text=part) if isinstance(part, str) else types.Part.from_uri(file_uri=part.uri, mime_type=getattr(part, "mime_type", None) or "application/octet-stream") for part in message_parts])]
     full_text = ""
+    fallback_models = [model, *[candidate for candidate in GEMINI_AGENT_FALLBACK_MODELS if candidate != model]]
+
+    def retryable_model_error(exc):
+        raw_code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+        try:
+            code = int(raw_code) if raw_code is not None else None
+        except (TypeError, ValueError):
+            code = None
+        text = str(exc).lower()
+        return code in (404, 429, 500, 502, 503, 504) or any(term in text for term in (
+            "resource_exhausted", "quota", "rate limit", "model not found", "not found for api version",
+        ))
+
     for _ in range(MAX_TOOL_ROUNDS):
-        try:
-            stream = await client.aio.models.generate_content_stream(model=model, contents=contents, config=agent_config)
-        except Exception as exc:
-            error_message = describe_gemini_error(exc)
-            logger.error("Gemini stream failed (%s): %s", type(exc).__name__, exc, exc_info=True)
-            sentry_sdk.capture_exception(exc)
-            await _safe_send(websocket, {"type": "error", "message": error_message})
-            return full_text
         response_parts, function_calls = [], []
-        try:
-            async for chunk in stream:
-                candidate = chunk.candidates[0] if chunk.candidates else None
-                if not candidate or not candidate.content: continue
-                for part in candidate.content.parts or []:
-                    response_parts.append(part)
-                    if part.function_call:
-                        function_calls.append(part.function_call)
-                    elif part.text and not getattr(part, "thought", False):
-                        if not await _safe_send(websocket, {"type": "chunk", "text": part.text}): return full_text
-                        full_text += part.text
-        except Exception as exc:
-            error_message = describe_gemini_error(exc)
-            logger.error("Gemini stream iteration failed (%s): %s", type(exc).__name__, exc, exc_info=True)
-            sentry_sdk.capture_exception(exc)
+        stream_error = None
+        streamed_this_attempt = False
+        successful_stream = False
+
+        # Some quota errors are raised while iterating the stream, not when the
+        # stream is first created. Retry a fallback only before any text is sent,
+        # so partial replies or tool actions are never duplicated.
+        for candidate_model in fallback_models:
+            response_parts = []
+            function_calls = []
+            try:
+                stream = await client.aio.models.generate_content_stream(
+                    model=candidate_model,
+                    contents=contents,
+                    config=agent_config,
+                )
+                async for chunk in stream:
+                    candidate = chunk.candidates[0] if chunk.candidates else None
+                    if not candidate or not candidate.content:
+                        continue
+                    for part in candidate.content.parts or []:
+                        response_parts.append(part)
+                        if part.function_call:
+                            function_calls.append(part.function_call)
+                        elif part.text and not getattr(part, "thought", False):
+                            if not await _safe_send(websocket, {"type": "chunk", "text": part.text}):
+                                return full_text
+                            full_text += part.text
+                            streamed_this_attempt = True
+                successful_stream = True
+                break
+            except Exception as exc:
+                stream_error = exc
+                if not retryable_model_error(exc):
+                    break
+                if streamed_this_attempt:
+                    # Never replay a partially delivered assistant answer.
+                    break
+                logger.warning(
+                    "Gemini model %s failed before producing output (%s); trying fallback",
+                    candidate_model,
+                    type(exc).__name__,
+                )
+                sentry_sdk.capture_exception(exc)
+
+        if not successful_stream:
+            error_message = describe_gemini_error(stream_error or RuntimeError("No Gemini model is available"))
+            logger.error("Nexus Gemini generation failed (%s)", type(stream_error).__name__ if stream_error else "unknown")
+            if stream_error:
+                sentry_sdk.capture_exception(stream_error)
             await _safe_send(websocket, {"type": "error", "message": error_message})
             return full_text
+
         if not function_calls:
             if not full_text.strip():
                 await _safe_send(websocket, {"type": "error", "message": "Gemini returned an empty response. Check backend logs and model access."})
             return full_text
+
         contents.append(types.Content(role="model", parts=response_parts))
         tool_responses = []
         for call in function_calls:

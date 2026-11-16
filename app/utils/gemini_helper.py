@@ -200,9 +200,11 @@ def describe_gemini_error(exc: Exception) -> str:
     if code in (401, 403) or "api key" in text or "permission_denied" in text or "unauthenticated" in text:
         return "Gemini rejected the backend API key. Check GEMINI_API_KEY in the Render backend environment and confirm the key has Gemini API access."
     if code == 429 or "resource_exhausted" in text or "quota" in text:
-        return "Gemini API quota or rate limit reached. Check the Gemini project quota and billing, then retry."
+        if "limit: 0" in text or "free_tier_requests" in text:
+            return "This Gemini API key has no available requests for the selected model. Nexus tried alternate models; check that the key is enabled for the project and its quota/billing settings."
+        return "Gemini API quota or rate limit reached for the available models. Nexus tried alternate models; retry later or check the project's quota and billing."
     if code == 404 or "not_found" in text:
-        return "The configured Gemini model or API resource was not found. Check the model name and API access."
+        return "The configured Gemini models were unavailable. Nexus tried its fallback models; check API access and model availability for this key."
     if code and int(code) >= 500:
         return "Gemini is temporarily unavailable. Please retry in a moment."
     return "Gemini could not generate a response. Check the Render backend logs and GEMINI_API_KEY configuration."
