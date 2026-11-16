@@ -1,4 +1,4 @@
-"""Safe, user-scoped Gemini tools for the dashboard command center."""
+"""Safe, user-scoped dashboard tools for the dashboard command center."""
 import asyncio
 import json
 import re
@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 from fastapi import WebSocket
-from google.genai import types
 from starlette.websockets import WebSocketDisconnect
 
 from app.api.todoist import (
@@ -20,15 +19,12 @@ from app.db_store import (
     get_command, get_project, list_commands, list_projects, save_command, save_project,
 )
 from app.models import ProjectItem, TaskItem
-from app.utils.gemini_helper import (
-    _safe_send, create_gemini_client, describe_gemini_error,
-)
+from app.utils.ai_context import _safe_send
 from app.utils.google_services_calender_helper import get_google_calendar_service
 from app.utils.google_services_gmail_helper import get_gmail_service
 
 IST = timezone(timedelta(hours=5, minutes=30))
 MAX_TOOL_ROUNDS = 6
-GEMINI_AGENT_FALLBACK_MODELS = ("gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite")
 CONFIRM_TIMEOUT_SECONDS = 120
 COMMAND_DANGEROUS = re.compile(r"[;&|`$<>\n\r]")
 
@@ -402,135 +398,3 @@ def _run_tool(spec, user, args):
         logger.warning("AI tool %s failed: %s", spec["function"].__name__, exc, exc_info=True)
         sentry_sdk.capture_exception(exc)
         return fail(getattr(exc, "detail", None) or str(exc))
-
-
-def declarations():
-    registry = []
-    for name, spec in TOOLS.items():
-        declaration = {"name": name, "description": spec["description"]}
-        if spec["properties"]:
-            declaration["parameters"] = {"type": "OBJECT", "properties": spec["properties"]}
-            if spec["required"]: declaration["parameters"]["required"] = list(spec["required"])
-        registry.append(declaration)
-    return [types.Tool(function_declarations=registry)]
-
-
-
-def _agent_config(config):
-    # Preserve the original Gemini system instruction.
-    base_instruction = (
-        getattr(config, "system_instruction", "") or ""
-    )
-
-    # Append the rules already defined in this module.
-    instruction = f"{base_instruction}\n\n{RULES}"
-
-    # Preserve existing tools, including Google Search when enabled.
-    existing_tools = list(getattr(config, "tools", None) or [])
-    existing_tools.extend(declarations())
-
-    return types.GenerateContentConfig(
-        system_instruction=instruction,
-        tools=existing_tools,
-        automatic_function_calling=types.AutomaticFunctionCallingConfig(
-            disable=True
-        )
-    )
-
-
-async def run_agent_turn(websocket: WebSocket, model: str, message_parts: List[Any], config: Any, current_user: Dict[str, Any]) -> str:
-    client = create_gemini_client()
-    agent_config = _agent_config(config)
-    contents = [types.Content(role="user", parts=[types.Part.from_text(text=part) if isinstance(part, str) else types.Part.from_uri(file_uri=part.uri, mime_type=getattr(part, "mime_type", None) or "application/octet-stream") for part in message_parts])]
-    full_text = ""
-    fallback_models = [model, *[candidate for candidate in GEMINI_AGENT_FALLBACK_MODELS if candidate != model]]
-
-    def retryable_model_error(exc):
-        raw_code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
-        try:
-            code = int(raw_code) if raw_code is not None else None
-        except (TypeError, ValueError):
-            code = None
-        text = str(exc).lower()
-        return code in (404, 429, 500, 502, 503, 504) or any(term in text for term in (
-            "resource_exhausted", "quota", "rate limit", "model not found", "not found for api version",
-        ))
-
-    for _ in range(MAX_TOOL_ROUNDS):
-        response_parts, function_calls = [], []
-        stream_error = None
-        streamed_this_attempt = False
-        successful_stream = False
-
-        # Some quota errors are raised while iterating the stream, not when the
-        # stream is first created. Retry a fallback only before any text is sent,
-        # so partial replies or tool actions are never duplicated.
-        for candidate_model in fallback_models:
-            response_parts = []
-            function_calls = []
-            try:
-                stream = await client.aio.models.generate_content_stream(
-                    model=candidate_model,
-                    contents=contents,
-                    config=agent_config,
-                )
-                async for chunk in stream:
-                    candidate = chunk.candidates[0] if chunk.candidates else None
-                    if not candidate or not candidate.content:
-                        continue
-                    for part in candidate.content.parts or []:
-                        response_parts.append(part)
-                        if part.function_call:
-                            function_calls.append(part.function_call)
-                        elif part.text and not getattr(part, "thought", False):
-                            if not await _safe_send(websocket, {"type": "chunk", "text": part.text}):
-                                return full_text
-                            full_text += part.text
-                            streamed_this_attempt = True
-                successful_stream = True
-                break
-            except Exception as exc:
-                stream_error = exc
-                if not retryable_model_error(exc):
-                    break
-                if streamed_this_attempt:
-                    # Never replay a partially delivered assistant answer.
-                    break
-                logger.warning(
-                    "Gemini model %s failed before producing output (%s); trying fallback",
-                    candidate_model,
-                    type(exc).__name__,
-                )
-                sentry_sdk.capture_exception(exc)
-
-        if not successful_stream:
-            error_message = describe_gemini_error(stream_error or RuntimeError("No Gemini model is available"))
-            logger.error("Nexus Gemini generation failed (%s)", type(stream_error).__name__ if stream_error else "unknown")
-            if stream_error:
-                sentry_sdk.capture_exception(stream_error)
-            await _safe_send(websocket, {"type": "error", "message": error_message})
-            return full_text
-
-        if not function_calls:
-            if not full_text.strip():
-                await _safe_send(websocket, {"type": "error", "message": "Gemini returned an empty response. Check backend logs and model access."})
-            return full_text
-
-        contents.append(types.Content(role="model", parts=response_parts))
-        tool_responses = []
-        for call in function_calls:
-            spec = TOOLS.get(call.name)
-            if not spec:
-                result = fail(f"Unknown tool: {call.name}")
-            elif spec["mutation"] == "change" and not await _ask_approval(websocket, uuid.uuid4().hex, call.name, current_user, dict(call.args or {})):
-                result = fail("User declined or approval timed out. No change was made.")
-            else:
-                result = await asyncio.to_thread(_run_tool, spec, current_user, dict(call.args or {}))
-                if result.get("ok") and spec["mutation"] != "read":
-                    await _safe_send(websocket, {"type": "data_changed", "scope": spec["scope"]})
-                elif spec["mutation"] != "read" and not result.get("ok"):
-                    await _safe_send(websocket, {"type": "error", "message": result.get("error", "Tool operation failed.")})
-            tool_responses.append(types.Part.from_function_response(name=call.name, response=result))
-        contents.append(types.Content(role="user", parts=tool_responses))
-    await _safe_send(websocket, {"type": "error", "message": "Stopped after too many tool steps. Try a simpler request."})
-    return full_text

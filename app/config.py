@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import sentry_sdk
-import google.genai as genai
 
 load_dotenv()
 
@@ -56,8 +55,8 @@ SCOPES = [
     "openid",
 ]
 
-GEMINI_API_KEY = optional_env("GEMINI_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+NVIDIA_API_KEY = optional_env("NVIDIA_API_KEY", "").strip()
+NVIDIA_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
 DATA_DIR = Path(os.getenv("DATA_DIR", "dashboard_data"))
 DATA_DIR.mkdir(exist_ok=True, parents=True)
 

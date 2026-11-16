@@ -14,7 +14,7 @@ os.environ.setdefault("DATA_DIR", str(ROOT / "test_data"))
 os.environ.setdefault("GOOGLE_CLIENT_ID", "")
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "")
 os.environ.setdefault("GOOGLE_REDIRECT_URI", "http://localhost:8000/dashboard/auth/google/callback")
-os.environ.setdefault("GEMINI_API_KEY", "")
+os.environ.setdefault("NVIDIA_API_KEY", "")
 # Owner email used to gate /dashboard/system/* endpoints and /dashboard/owner-access.
 # Set so owner-gated endpoints are exerciseable in the test suite by default.
 # Individual tests monkeypatch app.config/app.owner_access DASHBOARD_OWNER_EMAIL

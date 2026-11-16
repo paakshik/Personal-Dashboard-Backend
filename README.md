@@ -8,7 +8,7 @@ It is a Python FastAPI service intended to run locally or as the backend service
 - FastAPI REST endpoints with Google OAuth sign-in and JWT-protected user APIs.
 - SQLAlchemy persistence for users, Google credentials, projects, commands, AI chat, and system metric history.
 - Optional Redis cache for read-heavy per-user collections; PostgreSQL remains authoritative.
-- Google Calendar, Gmail, Drive, Todoist, and Gemini integrations when their credentials are configured.
+- Google Calendar, Gmail, Drive, Todoist, and NVIDIA Nemotron integrations when their credentials are configured.
 - Health endpoint at `/health` and API documentation at `/docs`.
 
 ## Tech Stack
@@ -22,7 +22,7 @@ It is a Python FastAPI service intended to run locally or as the backend service
 - Python 3.11.
 - PostgreSQL 14 or later (the exact Render engine version is not set in this repository).
 - Optional Redis instance for caching.
-- Google OAuth credentials for sign-in and Google APIs; optional Gemini and Todoist keys for those integrations.
+- Google OAuth credentials for sign-in and Google APIs; optional NVIDIA and Todoist keys for those integrations.
 
 ### Install and configure
 From `backend/`:
@@ -50,14 +50,29 @@ Fill `.env` with the values below. Keep real credentials local or in Render envi
 | `FRONTEND_URL` | No | `http://localhost:5173` |
 | `REDIS_URL` | No | Redis connection URL; unset means PostgreSQL-only reads |
 | `ALLOWED_ORIGINS` | No | Comma-separated frontend origins for CORS |
-| `GEMINI_API_KEY` | For AI | Gemini API key |
+| `NVIDIA_API_KEY` | For AI | NVIDIA hosted API key; backend only. Nemotron Ultra is preconfigured. |
 | `TODOIST_TOKEN` | For Todoist | Todoist API token |
 | `SENTRY_DSN` | No | Sentry project DSN |
 | `DB_POOL_SIZE` | No | `5` pooled connections per process |
 | `DB_MAX_OVERFLOW` | No | `5` temporary connections per process |
 | `DB_POOL_TIMEOUT` | No | `5` seconds to wait for a connection |
 
+### NVIDIA Nemotron Ultra setup
+
+Create an API key at [NVIDIA Build](https://build.nvidia.com/nvidia/nemotron-3-ultra-550b-a55b). Add just this variable to `backend/.env` locally and to the Render backend environment:
+
+```dotenv
+NVIDIA_API_KEY=your-nvidia-api-key
+```
+
+Restart/redeploy the backend. No provider/model selection or new Python dependencies are needed. The fixed model is `nvidia/nemotron-3-ultra-550b-a55b`. Keep the key on the backend; never commit it or put it in a frontend variable.
+
+NVIDIA is the sole AI provider: streamed chat, user-scoped dashboard tool calls, existing approval cards, and daily briefings all use it. Gemini client code, models and fallback have been removed. Existing `/dashboard/gemini/*` URL paths are retained solely for frontend compatibility and saved history; they do not call Google AI. Google OAuth, Gmail, Calendar and Drive integrations remain independent of AI generation.
+
+This integration is text-only. Gemini file uploads and Google Search grounding are unavailable; attachments return a clear message. There is no automatic model/provider retry, so a partial reply or tool action is not replayed after failure. Verify NVIDIA account access, limits and processing terms before using real user data. Live hosted-model validation requires a valid NVIDIA key.
+
 ### Database and run
+
 Tables are created automatically during application startup. No seed data is required. For a fresh local PostgreSQL instance, create a database and set `DATABASE_URL` to its connection string, then run:
 
 ```bash
@@ -111,7 +126,7 @@ Target platform: Render Web Service with a Render PostgreSQL database. Set `DATA
 - Database connection failure: verify the URL, host access, credentials, SSL requirements, and that the database is running.
 - `503 Database is busy`: lower web worker count, inspect pool limits, or increase database capacity; do not remove the finite pool timeout.
 - Redis connection errors: check `REDIS_URL`; caching should fall back to PostgreSQL while Redis is unavailable.
-- Google/Gemini/Todoist integration errors: provide the corresponding credentials; those third-party services are not replaced by the database.
+- Google/NVIDIA/Todoist integration errors: provide the corresponding credentials; those third-party services are not replaced by the database.
 
 ## License
 **[PLACEHOLDER: Add the project license and copyright holder.]**
