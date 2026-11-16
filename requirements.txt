@@ -23,13 +23,11 @@ factory-boy==3.3.0
 Faker==40.1.2
 fastapi==0.128.0
 freezegun==1.5.5
-google-ai-generativelanguage
 google-api-core
 google-api-python-client
 google-auth
 google-auth-httplib2
 google-auth-oauthlib
-google-genai
 googleapis-common-protos
 greenlet==3.3.0
 grpcio==1.76.0
